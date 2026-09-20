@@ -1,44 +1,68 @@
-# blockwright
+<div align="center">
 
-**Блок-схемы по исходному коду C и C++ — в нотации ГОСТ 19.701-90.**
+<img src="docs/banner.png" width="840" alt="blockwright — flowcharts from C/C++ source code">
 
-Утилита читает исходники, разбирает их настоящими парсерами
-[tree-sitter](https://tree-sitter.github.io) и строит по каждой функции
-блок-схему: векторный `.svg` для отчёта и альбом-редактор в браузере, где
-схему можно доработать руками или нарисовать новую с нуля.
-
-Ничего устанавливать не нужно: парсеры лежат в комплекте.
-
-<p align="center">
-  <img src="docs/editor.png" width="820" alt="Альбом-редактор блок-схем">
+<p>
+  <strong>Turn C and C++ source code into GOST&nbsp;19.701-90 flowcharts.</strong><br>
+  Vector SVG for your report — and a real diagram editor in the browser.
 </p>
+
+<p>
+  <a href="https://github.com/CodedSplash/blockwright/actions/workflows/ci.yml"><img src="https://github.com/CodedSplash/blockwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/license-MIT-0a7ea4?style=flat-square" alt="MIT license">
+  <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-546e7a?style=flat-square" alt="Windows and Linux">
+  <img src="https://img.shields.io/badge/setup-not%20required-2ea44f?style=flat-square" alt="No setup required">
+  <img src="https://img.shields.io/badge/parser-tree--sitter-ff7043?style=flat-square" alt="tree-sitter">
+</p>
+
+<p>
+  <b>English</b> · <a href="README.ru.md">Русский</a>
+</p>
+
+<img src="docs/editor.png" width="880" alt="Browser editor with a generated flowchart">
+
+</div>
 
 ---
 
-## Что умеет
+## What it does
 
-* **Понимает язык, а не текст.** Разбор через `tree-sitter-c` и
-  `tree-sitter-cpp`: классы, шаблоны, пространства имён, перегрузки,
-  `for` по диапазону, `switch` с «проваливанием», `goto`, `try/catch`.
-* **Несколько файлов и заголовков.** Папка обходится рекурсивно, язык
-  каждого файла определяется сам; если файл не разбирается одной
-  грамматикой, пробуется вторая.
-* **Читаемый текст в блоках.** `cout << "Балл #" << i << ": "` превращается
-  в `Вывод: Балл #{i}:`, а `printf("Сумма: %d\n", s)` — в `Вывод: Сумма: {s}`.
-* **Редактор в браузере.** Перетаскивание блоков, правка узлов линий,
-  палитра фигур, создание схем с нуля, отмена, экспорт SVG/PNG, печать.
-* **Готово для отчёта.** SVG вставляется в Word как вектор, PNG копируется
-  в буфер одной кнопкой, схемы подписаны «Рисунок N — …».
-* **Открывается в Figma** аккуратным деревом слоёв: стрелки — настоящие
-  фигуры, блоки разложены по именованным группам.
-* **Переносимость.** Скопировал папку — работает. Или собери один
-  исполняемый файл на Windows и Linux.
+`blockwright` reads your sources, parses them with the real
+[tree-sitter](https://tree-sitter.github.io) grammars for C and C++, and draws a
+flowchart for every function it finds — as a standalone `.svg` and as an album
+page you can actually edit.
 
-<p align="center">
-  <img src="docs/example-switch.png" width="620" alt="Пример схемы: switch">
-</p>
+> **Note on language.** Diagram labels and the interface are in Russian, because
+> the tool targets GOST 19.701-90 — the flowchart standard used in Russian
+> engineering coursework. The code, CLI and this documentation are in English.
 
-## Быстрый старт
+## Highlights
+
+- **It understands the language, not the text.** Classes, templates, namespaces,
+  overloads, range-`for`, `switch` with fallthrough, `goto`, `try/catch` —
+  handled through the actual syntax tree, never regular expressions.
+- **Whole projects.** Directories are walked recursively, the language of every
+  file is detected automatically, and a file that fails one grammar is retried
+  with the other.
+- **Readable block text.** `cout << "Score #" << i << ": "` becomes
+  `Вывод: Score #{i}:`, and `printf("Total: %d\n", s)` becomes `Вывод: Total: {s}`
+  — string literals and values are woven into one sentence instead of a pile of
+  quotes and commas.
+- **A real editor, not a picture.** Drag blocks, reshape connectors, re-attach
+  arrows, add shapes from a palette, draw a chart from scratch, undo, export.
+- **Report ready.** SVG drops into Word as vector, PNG goes straight to the
+  clipboard, every diagram is captioned `Рисунок N — …`.
+- **Figma friendly.** Arrows are real polygons and shapes sit in named groups,
+  so the SVG opens as a clean layer tree instead of anonymous paths.
+- **Portable.** Copy the folder and run it — parsers ship with the repository.
+  Or build a single executable for Windows and Linux.
+
+<div align="center">
+  <img src="docs/example-switch.png" width="620" alt="Generated flowchart for a switch statement">
+</div>
+
+## Quick start
 
 ```bash
 git clone https://github.com/CodedSplash/blockwright.git
@@ -46,31 +70,33 @@ cd blockwright
 python -m blockwright examples --open
 ```
 
-Нужен только Python 3.10 или новее.
+Python 3.10+ is the only requirement — parsers are bundled, nothing to install.
 
-* **Windows** — двойной щелчок по `blockwright.bat`
-* **Linux / macOS** — `chmod +x blockwright.sh`, дальше `./blockwright.sh`
+| Platform | Launcher |
+|----------|----------|
+| Windows  | double-click `blockwright.bat` |
+| Linux / macOS | `chmod +x blockwright.sh` once, then `./blockwright.sh` |
 
-Результат складывается в подпапку `блок-схемы` рядом с исходниками:
+Output lands in a `блок-схемы` folder next to the sources:
 
 ```
 блок-схемы/
-    index.html           альбом-редактор со всеми схемами
-    grades__main.svg     по одной схеме на функцию
-    grades__verdict.svg
-    grades__average.svg
+├── index.html           album + editor with every diagram
+├── grades__main.svg     one file per function
+├── grades__verdict.svg
+└── grades__average.svg
 ```
 
-## Выбор исходников в консоли
+## Interactive picker
 
-Если запустить без аргументов, откроется файловый навигатор: `→` входит в
-папку, `←` поднимается наверх, `Space` отмечает файл или всю папку
-рекурсивно. Функции в правой панели пересчитываются на лету, любую можно
-выключить. Работает и мышь, и клавиатура.
+Run it with no arguments and you get a file navigator in the terminal: `→` enters
+a folder, `←` goes up, `Space` marks a file — or a whole folder, recursively. The
+function list on the right updates as you go, and any function can be switched
+off. Mouse and keyboard both work.
 
-```
+```text
   Блок-схемы C / C++   ·   выбор исходников
- Папка: D:\Programming projects\blockwright        отмечено файлов: 1
+ Папка: ~/projects/blockwright                     отмечено файлов: 1
 
  ФАЙЛЫ И ПАПКИ                     ФУНКЦИИ  3 из 3
  ❯ ↑ ..  на уровень выше           ❯ ◉ verdict            grades.cpp:12
@@ -86,115 +112,124 @@ python -m blockwright examples --open
  / поиск  Enter ПОСТРОИТЬ  q выход
 ```
 
-Настройки переключаются буквами и запоминаются до следующего запуска.
+Settings toggle with single letters and are remembered between runs.
 
-## Командная строка
+## Command line
 
 ```bash
-python -m blockwright "Лабораторная работа №1"     # одна папка
-python -m blockwright . -o out --open              # всё дерево, открыть альбом
-python -m blockwright . --only main --only *Queue* # отобрать функции
-python -m blockwright . --png 3                    # ещё и растр ×3
-python -m blockwright . --list                     # что нашлось, без сборки
+python -m blockwright "Lab 1"                      # one folder
+python -m blockwright . -o out --open              # whole tree, open the album
+python -m blockwright . --only main --only *Queue* # pick functions by pattern
+python -m blockwright . --png 3                    # also render raster at ×3
+python -m blockwright . --list                     # just list what was found
 ```
 
-| Ключ | Назначение |
-|------|------------|
-| `-o, --out ПАПКА` | куда складывать результат |
-| `--only ШАБЛОН`, `--exclude ШАБЛОН` | отобрать функции по имени |
-| `--lang {auto,c,cpp}` | принудительно задать язык |
-| `--for-style {auto,hexagon,decision}` | оформление `for` |
-| `--io-style {pretty,list,code}` | текст блоков ввода-вывода |
-| `--return-style {auto,value,end}` | оформление `return` |
-| `--png [МАСШТАБ]` | дополнительно сохранить `.png` (по умолчанию ×2) |
-| `--keep-std` | не убирать префикс `std::` |
-| `--width N` | длина строки текста в блоке (по умолчанию 38) |
-| `--plain-begin` | писать «Начало» вместо сигнатуры функции |
-| `-i`, `--no-ui` | открыть / не открывать выбор в консоли |
-| `--no-svg`, `--no-html`, `--no-recursive`, `-q` | прочее |
+<details>
+<summary><b>All options</b></summary>
 
-## Редактор
+| Option | Meaning |
+|--------|---------|
+| `-o, --out DIR` | where to write the result |
+| `--only PATTERN`, `--exclude PATTERN` | filter functions by name (repeatable) |
+| `--lang {auto,c,cpp}` | force the grammar |
+| `--for-style {auto,hexagon,decision}` | how `for` loops are drawn |
+| `--io-style {pretty,list,code}` | text inside I/O blocks |
+| `--return-style {auto,value,end}` | how `return` is labelled |
+| `--png [SCALE]` | also save `.png` (default ×2, needs Chrome or Edge) |
+| `--keep-std` | keep the `std::` prefix |
+| `--width N` | characters per line inside a block (default 38) |
+| `--plain-begin` | write “Начало” instead of the function signature |
+| `-i, --interactive` | open the picker even when a path is given |
+| `--no-ui` | never open the picker (for scripts and CI) |
+| `--no-svg`, `--no-html` | skip individual files / the album |
+| `--no-recursive` | do not descend into subfolders |
+| `--list` | list functions and exit |
+| `-q, --quiet` | less output |
 
-Альбом `index.html` — это не картинка, а редактор: внутрь зашита модель
-каждой схемы, и браузер рисует её тем же алгоритмом, что и Python.
+</details>
 
-* Блоки перетаскиваются, ручки меняют размер. **Линии привязаны к блокам**:
-  конец переезжает вместе со «своим» блоком, подходит к нему строго по
-  нормали и не отрывается от соседнего.
-* Щелчок по линии показывает узлы: их можно таскать, добавлять и
-  привязывать к другим блокам. Кнопки «Проложить заново» и «Перепроложить
-  связи» строят маршрут с нуля.
-* Палитра слева: **Выбор** (V), **Связь** (C), **Подпись** (T) и семь типов
-  блоков ГОСТ (клавиши 1–7).
-* `Ctrl+Z` / `Ctrl+Shift+Z`, `Ctrl+D`, `Del`, стрелки — сдвиг, `Alt` — без
-  привязки к сетке, `Shift` — добавить к выделению.
-* **＋** создаёт пустую схему — алгоритм можно нарисовать и без кода.
-* **Проект…** выгружает все правки одним `.json`, **Открыть** — загружает
-  обратно. Правки живут в браузере и исходные файлы не трогают.
+## The editor
 
-## Как код превращается в схему
+`index.html` is not an image — the model of every diagram is embedded in the
+page and the browser redraws it with the same algorithm the Python side uses.
 
-| Конструкция | Блок |
-|-------------|------|
-| начало функции | овал с сигнатурой (для `main` — «Начало») |
-| выражение, присваивание, объявление | прямоугольник |
-| `cout <<`, `cin >>`, `printf`, `scanf`, `getline` | параллелограмм «Вывод: …» / «Ввод: …» |
-| вызов функции из этого же проекта | предопределённый процесс |
-| `if / else`, `else if` | ромб с ветвями «Да» / «Нет» |
-| `switch` | ромб с несколькими выходами, по колонке на `case` |
-| `for` со счётчиком | шестиугольник «подготовка»: `i = 0, n - 1` |
-| `for` общего вида | инициализация + ромб условия + модификация |
-| `for (auto x : v)` | шестиугольник «для каждого x из v» |
-| `while`, `do … while` | ромб условия с обратной связью |
-| `break`, `continue` | линия к выходу из цикла / к проверке условия |
-| `return` | овал «Возврат …» либо «Конец» |
-| `goto`, метка | круг-соединитель |
-| `throw`, `try / catch` | овал «Исключение: …», ромб «Возникло исключение» |
+- Blocks drag, handles resize them. **Connectors stay attached**: an endpoint
+  travels with its own block, always meets it along the side normal, and never
+  tears off the block at the other end.
+- Clicking a connector reveals its nodes — drag them, add new ones, or drop an
+  endpoint onto another block to re-attach it. *Reroute* rebuilds the path.
+- Palette on the left: **Select** (V), **Connector** (C), **Label** (T) and the
+  seven GOST block types (keys `1`–`7`).
+- `Ctrl+Z` / `Ctrl+Shift+Z`, `Ctrl+D`, `Del`, arrow keys to nudge, `Alt` to
+  ignore the grid, `Shift` to extend the selection.
+- **＋** starts an empty chart, so you can draw an algorithm that has no code yet.
+- **Проект…** exports every edit and custom chart as one `.json`; **Открыть**
+  loads it back. Edits live in the browser and never touch your files.
 
-<p align="center">
-  <img src="docs/example-main.png" width="460" alt="Пример схемы: main">
-</p>
+## How code maps to blocks
 
-## Отдельный исполняемый файл
+| Construct | Block |
+|-----------|-------|
+| function entry | terminator with the signature (`Начало` for `main`) |
+| expression, assignment, declaration | process |
+| `cout <<`, `cin >>`, `printf`, `scanf`, `getline` | input/output parallelogram |
+| call to a function from the same project | predefined process |
+| `if / else`, `else if` | decision with `Да` / `Нет` branches |
+| `switch` | decision with one column per `case`, fallthrough drawn explicitly |
+| counting `for` | preparation hexagon: `i = 0, n - 1` |
+| general `for` | init block + decision + step block |
+| `for (auto x : v)` | preparation hexagon “для каждого x из v” |
+| `while`, `do … while` | decision with a feedback line |
+| `break`, `continue` | line to the loop exit / to the condition |
+| `return` | terminator `Возврат …` or `Конец` |
+| `goto`, label | on-page connector |
+| `throw`, `try / catch` | terminator `Исключение: …`, decision for the handler |
+
+<div align="center">
+  <img src="docs/example-main.png" width="430" alt="Generated flowchart for main()">
+</div>
+
+## Standalone executable
 
 ```bash
 pip install pyinstaller
 python build.py
 ```
 
-Получится `dist/blockwright.exe` (Windows, ~9 МБ) или `dist/blockwright`
-(Linux). Внутри уже есть и Python, и парсеры — файл копируется на другой
-компьютер и запускается как есть. Собирать нужно на той системе, для
-которой делается сборка; для Linux подойдёт и WSL.
+Produces `dist/blockwright.exe` (Windows, ~9 MB) or `dist/blockwright` (Linux),
+with Python and the parsers inside — copy it anywhere and run. Build on the
+system you are targeting; WSL works for the Linux binary.
 
-## Устройство
+## Project layout
 
+```text
+blockwright/
+├── __main__.py     entry point, activates the bundled parsers
+├── parse.py        file discovery, grammar choice, function extraction
+├── build.py        syntax tree  →  intermediate representation
+├── model.py        IR structures
+├── layout.py       structural layout: coordinates of shapes and lines
+├── render.py       SVG output and the model handed to the editor
+├── album.py        the whole browser album/editor
+├── tui.py          terminal picker
+├── png.py          raster export via headless Chrome/Edge
+└── text.py         text wrapping and measurement
+tools/vendor.py     rebuild the bundled parsers
+build.py            single-file build
 ```
-blockwright/__main__.py   точка входа, подключение парсеров из vendor
-blockwright/parse.py      поиск файлов, выбор грамматики, извлечение функций
-blockwright/build.py      синтаксическое дерево -> внутреннее представление
-blockwright/model.py      структуры представления
-blockwright/layout.py     разметка: координаты фигур и линий
-blockwright/render.py     отрисовка SVG и модель для редактора
-blockwright/album.py      альбом-редактор index.html целиком
-blockwright/tui.py        выбор исходников в консоли
-blockwright/png.py        растеризация через headless Chrome/Edge
-blockwright/text.py       перенос и измерение текста
-tools/vendor.py           пересборка папки vendor
-build.py                  сборка одного исполняемого файла
-```
 
-Разметка структурная: каждая конструкция сама размещает себя и возвращает
-«рамку» с входом сверху и выходом снизу на одной вертикальной оси, поэтому
-блоки стыкуются без пересечений. Переходы `break` и `continue` выводятся
-наружу по свободным боковым дорожкам и замыкаются тем циклом, которому
-принадлежат.
+## How it works
 
-Редактор получает не картинку, а модель схемы и рисует её тем же
-алгоритмом — расхождение с Python проверено и не превышает 0,01 px, так
-что правка блока в браузере даёт ровно такой же SVG, как пересборка.
+Layout is **structural**: every construct places itself and returns a frame with
+its entry on top and its exit at the bottom, both on the same vertical spine, so
+blocks stack without overlaps. `break` and `continue` escape sideways through
+free lanes and are closed by the loop that owns them.
 
-## Лицензия
+The editor receives the model rather than a picture and renders it with the same
+algorithm — the two outputs were diffed and agree to within 0.01 px, so editing a
+block in the browser yields exactly the SVG a rebuild would produce.
 
-MIT — см. [LICENSE](LICENSE). Парсеры в `vendor/` принадлежат проекту
-tree-sitter и распространяются по той же лицензии.
+## License
+
+[MIT](LICENSE). The parsers under `vendor/` belong to the tree-sitter project and
+are distributed under the same license.

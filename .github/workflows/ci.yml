@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-charts:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Никаких pip install: проверяем, что парсеры из vendor/ действительно
+      # подхватываются и утилита работает сразу после клонирования.
+      - name: Build charts for the bundled example
+        run: python -m blockwright examples -o out --no-ui
+
+      - name: Check the expected files
+        shell: python
+        run: |
+          import pathlib, sys
+          out = pathlib.Path("out")
+          want = ["index.html", "grades__main.svg",
+                  "grades__verdict.svg", "grades__average.svg"]
+          missing = [n for n in want if not (out / n).is_file()]
+          if missing:
+              sys.exit("missing: " + ", ".join(missing))
+          page = (out / "index.html").read_text(encoding="utf-8")
+          for marker in ("<svg", "Вывод:", "blockwright"):
+              if marker not in page:
+                  sys.exit(f"album looks broken: {marker!r} not found")
+          print("ok:", ", ".join(p.name for p in sorted(out.iterdir())))
+
+      - name: Upload result
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: charts-${{ matrix.os }}
+          path: out
