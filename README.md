@@ -39,7 +39,7 @@ Vector SVG for your report — and a real diagram editor in the browser.
 | 🧠 **Real parsing** | tree-sitter grammars for C and C++: classes, templates, namespaces, overloads, range-`for`, `switch` with fallthrough, `goto`, `try/catch` — never regular expressions |
 | 📁 **Whole projects** | directories are walked recursively, the language of each file is detected automatically, and a file that fails one grammar is retried with the other |
 | 💬 **Readable blocks** | `cout << "Score #" << i << ": "` becomes `Вывод: Score #{i}:`, and `printf("Total: %d\n", s)` becomes `Вывод: Total: {s}` |
-| ✏️ **A real editor** | drag blocks, reshape connectors, re-attach arrows, add shapes from a palette, draw a chart from scratch, undo, export |
+| ✏ **A real editor** | drag blocks, reshape connectors, re-attach arrows, add shapes from a palette, draw a chart from scratch, undo, export |
 | 📄 **Report ready** | SVG drops into Word as vector, PNG goes straight to the clipboard, every diagram is captioned `Рисунок N — …` |
 | 🎨 **Figma friendly** | arrows are real polygons and shapes sit in named groups, so the file opens as a clean layer tree |
 | 🎒 **Portable** | parsers ship with the repository — clone and run, or build a single executable |
@@ -100,7 +100,7 @@ move, and any function can be switched off. Mouse and keyboard both work.
 
 ---
 
-## ⌨️ Command line
+## 💻 Command line
 
 ```bash
 python -m blockwright "Lab 1"                      # one folder
