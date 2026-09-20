@@ -524,7 +524,7 @@ def layout_switch(item, opts):
     fall_y = bottom + 18
     merge_y = fall_y + 24
 
-    has_default = any("иначе" in c.labels for c in item.cases)
+    has_default = any(c.is_default for c in item.cases)
     merged = False
     for i, (case, c, sp) in enumerate(zip(item.cases, cols, spines)):
         if c.exit is None:
@@ -553,7 +553,8 @@ def layout_switch(item, opts):
         ex = max(b[2], head["w"] / 2) + CH_GAP
         f.edges.append(_edge([(spines[-1], bus_y), (ex, bus_y), (ex, merge_y),
                               (0.0, merge_y)], arrow=False))
-        f.labels.append(_label(ex + 5, bus_y - 6, "иначе", "start"))
+        f.labels.append(_label(ex + 5, bus_y - 6,
+                               getattr(opts, "default_label", "иначе"), "start"))
         merged = True
 
     f.spine = 0.0

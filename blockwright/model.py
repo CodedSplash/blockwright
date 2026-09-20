@@ -72,6 +72,7 @@ class Case:
     labels: List[str]
     body: object
     fallthrough: bool = False
+    is_default: bool = False      # ветка default, её метка зависит от языка
 
 
 @dataclass
