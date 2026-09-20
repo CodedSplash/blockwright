@@ -49,16 +49,68 @@ class Glyphs:
             self.dot = "-"
 
 
-FOR_STYLES = [("auto", "как в коде"), ("hexagon", "шестиугольник"),
-              ("decision", "через условие")]
-IO_STYLES = [("pretty", "связной фразой"), ("list", "перечислением"),
-             ("code", "как в коде")]
-RET_STYLES = [("auto", "авто"), ("value", "всегда «Возврат»"),
-              ("end", "всегда «Конец»")]
+FOR_STYLES = ["auto", "hexagon", "decision"]
+IO_STYLES = ["pretty", "list", "code"]
+RET_STYLES = ["auto", "value", "end"]
 PNG_SCALES = [0, 1, 2, 3, 4]
 
 DEFAULTS = {"for_style": "auto", "io_style": "pretty", "return_style": "auto",
-            "width": 38, "png": 0, "keep_std": False}
+            "width": 38, "png": 0, "keep_std": False, "ui_lang": "ru"}
+
+# --- переводы интерфейса -------------------------------------------------
+L10N = {
+    "ru": {
+        "title": "  Блок-схемы C / C++   ·   выбор исходников",
+        "folder": "Папка:", "marked": "отмечено файлов: {0}",
+        "files": "ФАЙЛЫ И ПАПКИ", "funcs": "ФУНКЦИИ  {0} из {1}",
+        "up": "на уровень выше", "settings": "Настройки",
+        "o_for": "цикл for", "o_io": "ввод-вывод", "o_ret": "return",
+        "o_width": "ширина текста", "o_png": "растр PNG", "o_std": "префикс std::",
+        "for_auto": "как в коде", "for_hexagon": "шестиугольник",
+        "for_decision": "через условие",
+        "io_pretty": "связной фразой", "io_list": "перечислением", "io_code": "как в коде",
+        "ret_auto": "авто", "ret_value": "всегда «Возврат»", "ret_end": "всегда «Конец»",
+        "png_off": "не делать", "std_keep": "оставить", "std_drop": "убирать",
+        "hint": "{k}↑↓{r} выбор  {k}Space{r} отметить  {k}→{r} в папку  {k}←{r} наверх  "
+                "{k}Tab{r} панель  {k}a/n{r} все/снять  {k}/{r} поиск  {k}l{r} язык  "
+                "{k}Enter{r} ПОСТРОИТЬ  {k}q{r} выход",
+        "hint_short": "{k}↑↓{r} {k}Space{r} {k}←→{r} {k}Tab{r}  {k}Enter{r} построить  "
+                      "{k}q{r} выход",
+        "filter": "Фильтр:", "filter_hint": "Enter — применить, Esc — сбросить",
+        "no_files": "Не отмечено ни одного файла — нажмите Space",
+        "no_funcs": "Все функции выключены",
+        "press_any": "Нажмите любую клавишу…",
+    },
+    "en": {
+        "title": "  Flowcharts for C / C++   ·   pick the sources",
+        "folder": "Folder:", "marked": "files selected: {0}",
+        "files": "FILES AND FOLDERS", "funcs": "FUNCTIONS  {0} of {1}",
+        "up": "one level up", "settings": "Settings",
+        "o_for": "for loop", "o_io": "input/output", "o_ret": "return",
+        "o_width": "text width", "o_png": "PNG raster", "o_std": "std:: prefix",
+        "for_auto": "as in code", "for_hexagon": "hexagon", "for_decision": "as a decision",
+        "io_pretty": "as a sentence", "io_list": "as a list", "io_code": "as in code",
+        "ret_auto": "auto", "ret_value": "always “Return”", "ret_end": "always “End”",
+        "png_off": "skip", "std_keep": "keep", "std_drop": "strip",
+        "hint": "{k}↑↓{r} move  {k}Space{r} mark  {k}→{r} enter  {k}←{r} up  "
+                "{k}Tab{r} panel  {k}a/n{r} all/none  {k}/{r} filter  {k}l{r} language  "
+                "{k}Enter{r} BUILD  {k}q{r} quit",
+        "hint_short": "{k}↑↓{r} {k}Space{r} {k}←→{r} {k}Tab{r}  {k}Enter{r} build  "
+                      "{k}q{r} quit",
+        "filter": "Filter:", "filter_hint": "Enter — apply, Esc — clear",
+        "no_files": "No files selected — press Space",
+        "no_funcs": "All functions are switched off",
+        "press_any": "Press any key…",
+    },
+}
+LANG = "ru"
+
+
+def tr(key, *args):
+    text = L10N.get(LANG, L10N["ru"]).get(key) or L10N["ru"].get(key, key)
+    for i, value in enumerate(args):
+        text = text.replace("{" + str(i) + "}", str(value))
+    return text
 
 
 # ---------------------------------------------------------------- терминал
@@ -342,11 +394,10 @@ class Picker:
         def line(row, s=""):
             buf.append(f"\x1b[{row};1H{fit(s, W)}\x1b[K")
 
-        line(1, TITLE + pad("  Блок-схемы C / C++   " + g.dot +
-                            "   выбор исходников", W) + R)
+        line(1, TITLE + pad(tr("title").replace("·", g.dot), W) + R)
         marked = len(self.marked)
-        info = (f" {DIM}Папка:{R} {self.cwd}")
-        right = f"{ON}отмечено файлов: {marked}{R}"
+        info = f' {DIM}{tr("folder")}{R} {self.cwd}'
+        right = f'{ON}{tr("marked", marked)}{R}'
         line(2, pad(info, W - plain_len(right) - 1) + right)
 
         two = W >= 100
@@ -360,9 +411,9 @@ class Picker:
         ents = self.visible_entries()
         fns = self.visible_funcs()
         on = sum(1 for f in self.funcs if f[3] not in self.func_off)
-        head_l = (HEAD if self.panel == 0 else DIM) + "ФАЙЛЫ И ПАПКИ" + R
+        head_l = (HEAD if self.panel == 0 else DIM) + tr("files") + R
         head_r = ((HEAD if self.panel == 1 else DIM) +
-                  f"ФУНКЦИИ  {on} из {len(self.funcs)}" + R)
+                  tr("funcs", on, len(self.funcs)) + R)
         line(body_top - 1, " " + pad(head_l, lw) + (("  " + head_r) if two else ""))
 
         self._scroll(0, body_h, len(ents))
@@ -387,19 +438,19 @@ class Picker:
 
         c = self.cfg
         o_row = H - opts_h - 1
-        self.frame(line, o_row, W, B + "Настройки" + R, "top")
+        self.frame(line, o_row, W, B + tr("settings") + R, "top")
         col = (W - 2) // 2
 
         def opt(k, name, val):
             return f"{KEY}{k}{R} {name} {DIM}{'.' * max(1, 16 - len(name))}{R} {B}{val}{R}"
 
         rows = [
-            (opt("f", "цикл for", dict(FOR_STYLES)[c["for_style"]]),
-             opt("w", "ширина текста", c["width"])),
-            (opt("i", "ввод-вывод", dict(IO_STYLES)[c["io_style"]]),
-             opt("p", "растр PNG", f"×{c['png']}" if c["png"] else "не делать")),
-            (opt("r", "return", dict(RET_STYLES)[c["return_style"]]),
-             opt("s", "префикс std::", "оставить" if c["keep_std"] else "убирать")),
+            (opt("f", tr("o_for"), tr("for_" + c["for_style"])),
+             opt("w", tr("o_width"), c["width"])),
+            (opt("i", tr("o_io"), tr("io_" + c["io_style"])),
+             opt("p", tr("o_png"), f"×{c['png']}" if c["png"] else tr("png_off"))),
+            (opt("r", tr("o_ret"), tr("ret_" + c["return_style"])),
+             opt("s", tr("o_std"), tr("std_keep" if c["keep_std"] else "std_drop"))),
         ]
         for i, (a, b) in enumerate(rows):
             line(o_row + 1 + i, DIM + g.v + R + pad(" " + a, col) +
@@ -407,16 +458,13 @@ class Picker:
         self.frame(line, o_row + 4, W, "", "bottom")
 
         if self.typing:
-            line(H - 1, f"{KEY}Фильтр:{R} {self.filter}█   {DIM}Enter — применить, "
-                        f"Esc — сбросить{R}")
+            line(H - 1, f'{KEY}{tr("filter")}{R} {self.filter}█   '
+                        f'{DIM}{tr("filter_hint")}{R}')
         elif self.msg:
             line(H - 1, self.msg)
         else:
-            long_hint = (f"{KEY}↑↓{R} выбор  {KEY}Space{R} отметить  {KEY}→{R} в папку  "
-                         f"{KEY}←{R} наверх  {KEY}Tab{R} панель  {KEY}a/n{R} все/снять  "
-                         f"{KEY}/{R} поиск  {KEY}Enter{R} ПОСТРОИТЬ  {KEY}q{R} выход")
-            short_hint = (f"{KEY}↑↓{R} {KEY}Space{R} {KEY}←→{R} {KEY}Tab{R}  "
-                          f"{KEY}Enter{R} построить  {KEY}q{R} выход")
+            long_hint = tr("hint").replace("{k}", KEY).replace("{r}", R)
+            short_hint = tr("hint_short").replace("{k}", KEY).replace("{r}", R)
             line(H - 1, long_hint if plain_len(long_hint) <= W else short_hint)
         buf.append("\x1b[J")
         sys.stdout.write("".join(buf))
@@ -444,7 +492,7 @@ class Picker:
         kind, full, name = items[idx]
         g = self.g
         if kind == "up":
-            body = f"{DIR}{g.up} ..{R}  {DIM}на уровень выше{R}"
+            body = f'{DIR}{g.up} ..{R}  {DIM}{tr("up")}{R}'
         elif kind == "dir":
             got, tot = self.dir_state(full)
             tag = (f"{ON}{got}/{tot}{R}" if got else
@@ -503,11 +551,16 @@ class Picker:
             for f in self.visible_funcs():
                 self.func_off.discard(f[3]) if value else self.func_off.add(f[3])
 
+    def toggle_lang(self):
+        global LANG
+        LANG = "en" if LANG == "ru" else "ru"
+        self.cfg["ui_lang"] = LANG
+        self.g = Glyphs(_unicode_ok())
+
     def cycle(self, key):
         c = self.cfg
 
-        def nxt(pairs, val):
-            keys = [k for k, _ in pairs]
+        def nxt(keys, val):
             return keys[(keys.index(val) + 1) % len(keys)]
 
         if key == "f":
@@ -616,6 +669,8 @@ class Picker:
         elif key == "/":
             self.typing = True
             self.filter = ""
+        elif key == "l":
+            self.toggle_lang()
         elif key in ("f", "i", "r", "p", "s", "w"):
             self.cycle(key)
         elif key == "enter":
@@ -629,33 +684,37 @@ class Picker:
 
     def finish(self):
         if not self.marked:
-            self.msg = WARN + "Не отмечено ни одного файла — нажмите Space" + R
+            self.msg = WARN + tr("no_files") + R
             return None
         names = [f[1] for f in self.funcs if f[3] not in self.func_off]
         if not names:
-            self.msg = WARN + "Все функции выключены" + R
+            self.msg = WARN + tr("no_funcs") + R
             return None
         self.cfg["paths"] = sorted(self.marked)
         self.cfg["only"] = ([] if len(names) == len(self.funcs)
                             else sorted(set(names)))
         self.cfg["root"] = self.cwd
+        self.cfg["ui_lang"] = LANG
         return self.cfg
 
 
 def run(root, cfg=None):
     """Показывает окно выбора. Возвращает конфиг, False (отмена) или None."""
+    global LANG
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         return None
     enable_vt()
     conf = dict(DEFAULTS)
     conf.update(cfg or {})
+    if conf.get("ui_lang") in L10N:
+        LANG = conf["ui_lang"]
     try:
         return Picker(root, conf).run()
     except KeyboardInterrupt:
         return False
 
 
-def pause(message="Нажмите любую клавишу…"):
+def pause(message=None):
     """Ждёт нажатия клавиши, чтобы окно консоли не закрылось."""
     if not sys.stdin.isatty():
         return
