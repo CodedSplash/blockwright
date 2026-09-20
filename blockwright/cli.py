@@ -25,11 +25,21 @@ class Opts:
     io_style: str = "pretty"       # pretty | list | code
     for_style: str = "auto"        # auto | hexagon | decision
     return_style: str = "auto"     # auto | value | end
+    lang: str = "ru"               # язык подписей на схеме
     yes_label: str = "Да"
     no_label: str = "Нет"
     begin_label: str = "Начало"
     end_label: str = "Конец"
+    default_label: str = "иначе"
     plain_begin: bool = False
+
+
+CHART_WORDS = {
+    "ru": {"yes": "Да", "no": "Нет", "begin": "Начало", "end": "Конец",
+           "default": "иначе"},
+    "en": {"yes": "Yes", "no": "No", "begin": "Begin", "end": "End",
+           "default": "else"},
+}
 
 
 _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -88,6 +98,10 @@ def build_parser():
                     help="оформление return: auto — «Конец» для return без значения "
                          "и для return 0 в main, value — всегда «Возврат …», "
                          "end — всегда «Конец»")
+    ap.add_argument("--theme", choices=["light", "dark"], default=None,
+                    help="палитра схем и альбома: светлая или тёмная")
+    ap.add_argument("--ui-lang", choices=["ru", "en"], default=None,
+                    dest="ui_lang", help="язык интерфейса альбома и консоли")
     ap.add_argument("--keep-std", action="store_true",
                     help="не убирать префикс std:: из текста блоков")
     ap.add_argument("--width", type=int, default=38, metavar="N",
@@ -136,7 +150,8 @@ def load_prefs():
 
 def save_prefs(cfg):
     keep = {k: cfg[k] for k in ("for_style", "io_style", "return_style",
-                                "width", "png", "keep_std") if k in cfg}
+                                "width", "png", "keep_std", "ui_lang",
+                                "theme") if k in cfg}
     keep["root"] = cfg.get("root", "")
     try:
         with open(PREFS, "w", encoding="utf-8") as fh:
@@ -153,11 +168,13 @@ def run_picker(args):
     if not os.path.isdir(start):
         start = os.path.dirname(os.path.abspath(start)) or os.getcwd()
     cfg = {k: prefs[k] for k in tui.DEFAULTS if k in prefs}
+    cfg.setdefault("ui_lang", args.ui_lang)
     res = tui.run(start, cfg)
     if res is None:
         return None
     if res is False:
         return False
+    res["theme"] = args.theme
     save_prefs(res)
     args.paths = res["paths"]
     if res["only"]:
@@ -168,12 +185,17 @@ def run_picker(args):
     args.width = res["width"]
     args.keep_std = res["keep_std"]
     args.png = float(res["png"]) if res["png"] else None
+    args.ui_lang = res.get("ui_lang", args.ui_lang)
     args.open = True
     return True
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    prefs = load_prefs()
+    # ключ командной строки важнее запомненного выбора
+    args.ui_lang = args.ui_lang or prefs.get("ui_lang") or "ru"
+    args.theme = args.theme or prefs.get("theme") or "light"
     from_ui = False
     if not args.no_ui and not args.list_only and (args.interactive or not args.paths):
         state = run_picker(args)
@@ -186,9 +208,13 @@ def main(argv=None):
             return 2
     paths = args.paths or ["."]
     io_style = "list" if args.io_style == "natural" else args.io_style
+    words = CHART_WORDS.get(args.ui_lang, CHART_WORDS["ru"])
     opts = Opts(max_chars=max(16, args.width), keep_std=args.keep_std,
                 io_style=io_style, for_style=args.for_style,
-                return_style=args.return_style, plain_begin=args.plain_begin)
+                return_style=args.return_style, plain_begin=args.plain_begin,
+                lang=args.ui_lang, yes_label=words["yes"], no_label=words["no"],
+                begin_label=words["begin"], end_label=words["end"],
+                default_label=words["default"])
 
     files = P.discover(paths, recursive=not args.no_recursive)
     if not files:
@@ -252,8 +278,9 @@ def main(argv=None):
                 continue
             fn_body = builder.build_body(info["body"], is_main=info["base"] == "main")
             from .model import Function
+            short = (opts.begin_label if info["base"] == "main" else info["short"])
             fn = Function(name=info["name"], signature=info["signature"],
-                          short=info["short"], file=path, rel=rel,
+                          short=short, file=path, rel=rel,
                           line=info["line"], lang=lang, body=fn_body)
             try:
                 frame = layout_function(fn, opts)
@@ -274,7 +301,7 @@ def main(argv=None):
                 svg_path = os.path.join(out_dir, uniq + ".svg")
                 with open(svg_path, "w", encoding="utf-8") as fh:
                     fh.write(render_svg(frame, title=title, standalone=True,
-                                        name=fn.name))
+                                        name=fn.name, theme=args.theme))
                 svg_files.append(svg_path)
             entries.append({
                 "rel": rel, "name": fn.name, "signature": fn.signature,
@@ -314,10 +341,11 @@ def main(argv=None):
     index = None
     if not args.no_html:
         index = os.path.join(out_dir, "index.html")
-        title = f"Блок-схемы: {os.path.basename(base_dir) or base_dir}"
+        folder = os.path.basename(base_dir) or base_dir
+        head = "Flowcharts" if args.ui_lang == "en" else "Блок-схемы"
         with open(index, "w", encoding="utf-8") as fh:
-            fh.write(render_html(entries, title=title,
-                                 subtitle=f"{len(entries)} схем · ГОСТ 19.701-90"))
+            fh.write(render_html(entries, title=f"{head}: {folder}", folder=folder,
+                                 lang=args.ui_lang, theme=args.theme))
 
     log(f"\nГотово: {len(entries)} блок-схем -> {out_dir}")
     if index:

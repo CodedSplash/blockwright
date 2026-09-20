@@ -35,6 +35,33 @@ _SPEC_RE = re.compile(
 
 _INT_RE = re.compile(r"^[+-]?\d+$")
 
+# --- подписи на самой схеме (не интерфейс, а текст блоков) ---------------
+CHART_L10N = {
+    "ru": {
+        "out": "Вывод: ", "out_plain": "Вывод", "in": "Ввод: ", "in_plain": "Ввод",
+        "newline": "Перевод строки", "return": "Возврат {0}", "return_bare": "Возврат",
+        "exception": "Исключение: {0}", "exception_bare": "Исключение",
+        "caught": "Возникло исключение {0}", "caught_bare": "Возникло исключение",
+        "foreach": "для каждого {0} из {1}", "more": "есть ещё элементы {0}?",
+        "true": "истина", "condition": "условие", "default": "иначе",
+    },
+    "en": {
+        "out": "Output: ", "out_plain": "Output", "in": "Input: ", "in_plain": "Input",
+        "newline": "New line", "return": "Return {0}", "return_bare": "Return",
+        "exception": "Exception: {0}", "exception_bare": "Exception",
+        "caught": "Exception caught {0}", "caught_bare": "Exception caught",
+        "foreach": "for each {0} in {1}", "more": "more elements in {0}?",
+        "true": "true", "condition": "condition", "default": "else",
+    },
+}
+
+
+def label(lang, key, *args):
+    text = CHART_L10N.get(lang, CHART_L10N["ru"]).get(key, key)
+    for i, value in enumerate(args):
+        text = text.replace("{" + str(i) + "}", str(value))
+    return text
+
 
 def unescape(s):
     """Раскрывает escape-последовательности строкового литерала."""
@@ -90,6 +117,10 @@ class Builder:
         self.opts = opts
         self.known = known_funcs
         self.fn_is_main = False
+        self.lang = getattr(opts, "lang", "ru")
+
+    def L(self, key, *args):
+        return label(self.lang, key, *args)
 
     # ---------- утилиты ----------
     def t(self, node):
@@ -184,7 +215,8 @@ class Builder:
         if k == "throw_statement":
             inner = n.named_children[0] if n.named_children else None
             txt = self.t(inner) if inner is not None else ""
-            return [M.Simple(M.TERMINATOR, ("Исключение: " + txt) if txt else "Исключение",
+            return [M.Simple(M.TERMINATOR,
+                             self.L("exception", txt) if txt else self.L("exception_bare"),
                              terminal=True)]
         if k in (";", "ERROR"):
             return []
@@ -195,7 +227,7 @@ class Builder:
     # ---------- отдельные конструкции ----------
     def cond_text(self, node):
         if node is None:
-            return "условие"
+            return self.L("condition")
         if node.type == "condition_clause":
             v = self.f(node, "value")
             if v is None:
@@ -219,7 +251,7 @@ class Builder:
             # `return 0` в main — штатное завершение программы, не «значение»
             label = self.opts.end_label
         else:
-            label = f"Возврат {txt}"
+            label = self.L("return", txt)
         return M.Simple(M.TERMINATOR, label, terminal=True)
 
     def if_stmt(self, n):
@@ -319,7 +351,7 @@ class Builder:
             body=body,
             style="decision",
             init=self._simple_from_node(self.f(n, "initializer")),
-            cond=self.cond_text(cond) if cond is not None else "истина",
+            cond=self.cond_text(cond) if cond is not None else self.L("true"),
             update=self._simple_from_node(self.f(n, "update")),
         )
 
@@ -327,10 +359,10 @@ class Builder:
         var = self.t(self.f(n, "declarator")).lstrip("&* ").strip()
         cont = self.t(self.f(n, "right"))
         body = self.block(self.f(n, "body"))
-        header = f"для каждого {var} из {cont}"
+        header = self.L("foreach", var, cont)
         if self.opts.for_style == "decision":
             return M.ForLoop(body=body, style="decision", init=None,
-                             cond=f"есть ещё элементы {cont}?", update=None)
+                             cond=self.L("more", cont), update=None)
         return M.ForLoop(body=body, style="hexagon", header=header)
 
     # --- switch ----------------------------------------------------------
@@ -343,7 +375,7 @@ class Builder:
             raw = [c for c in body.named_children if c.type == "case_statement"]
             for idx, cs in enumerate(raw):
                 val = self.f(cs, "value")
-                label = self.t(val) if val is not None else "иначе"
+                label = self.t(val) if val is not None else self.L("default")
                 stmts = []
                 for c in cs.named_children:
                     if val is not None and c.start_byte == val.start_byte:
@@ -356,7 +388,7 @@ class Builder:
                 labels = pending_labels + [label]
                 pending_labels = []
                 blk = M.Seq(stmts)
-                cases.append(M.Case(labels, blk))
+                cases.append(M.Case(labels, blk, is_default=val is None))
             if pending_labels:
                 cases.append(M.Case(pending_labels, M.Seq([])))
         # определить «проваливание» (нет break/return в конце ветки)
@@ -369,7 +401,8 @@ class Builder:
         for c in n.named_children:
             if c.type == "catch_clause":
                 params = self.t(self.f(c, "parameters"))
-                cond = "Возникло исключение " + strip_parens(params) if params else "Возникло исключение"
+                cond = (self.L("caught", strip_parens(params)) if params
+                        else self.L("caught_bare"))
                 items.append(M.If(cond, self.block(self.f(c, "body")), None))
         return items
 
@@ -424,8 +457,7 @@ class Builder:
         name = self.raw_name(node).split("::")[-1].split("(")[0].strip()
         return name in MANIPULATORS
 
-    @staticmethod
-    def _weave(segments, prefix):
+    def _weave(self, segments, prefix):
         """Склеивает куски текста и выражений в одну читаемую строку.
 
         Текст из литералов идёт как есть, значения выражений подставляются
@@ -434,13 +466,13 @@ class Builder:
         """
         exprs = [v for kind, v in segments if kind == "expr"]
         if not any(kind == "text" for kind, _ in segments):
-            return prefix + ", ".join(exprs) if exprs else "Перевод строки"
+            return prefix + ", ".join(exprs) if exprs else self.L("newline")
         buf = []
         for kind, v in segments:
             buf.append(v if kind == "text" else "{" + v + "}")
         body = normalize("".join(buf)).strip()
         if not body:
-            return prefix + ", ".join(exprs) if exprs else "Перевод строки"
+            return prefix + ", ".join(exprs) if exprs else self.L("newline")
         return prefix + body
 
     def _segments(self, nodes):
@@ -478,7 +510,7 @@ class Builder:
         if tail:
             body = body.rstrip() + " " + ", ".join("{" + a + "}" for a in tail)
         body = normalize(body).strip()
-        return prefix + body if body else "Перевод строки"
+        return prefix + body if body else self.L("newline")
 
     def _flatten_stream(self, node, op):
         if node.type == "binary_expression" and self.op_of(node) == op:
@@ -501,15 +533,16 @@ class Builder:
                     return M.Simple(M.IO, self.t(node))
                 if pretty:
                     return M.Simple(M.IO, self._weave(self._segments(parts[1:]),
-                                                      "Вывод: "))
+                                                      self.L("out")))
                 args = [self.t(p) for p in parts[1:]]
                 args = [a for a in args if a not in ENDL and a.replace("std::", "") not in ENDL]
-                return M.Simple(M.IO, "Вывод: " + ", ".join(args) if args else "Перевод строки")
+                return M.Simple(M.IO, self.L("out") + ", ".join(args)
+                                if args else self.L("newline"))
             if op == ">>" and head in IN_STREAMS:
                 if code_style:
                     return M.Simple(M.IO, self.t(node))
                 args = [self.t(p) for p in parts[1:]]
-                return M.Simple(M.IO, "Ввод: " + ", ".join(args))
+                return M.Simple(M.IO, self.L("in") + ", ".join(args))
             return None
         # --- функции C ---
         if node.type == "call_expression":
@@ -521,23 +554,24 @@ class Builder:
                 stream = args[0].split("::")[-1]
                 if stream in IN_STREAMS:
                     return M.Simple(M.IO, self.t(node) if code_style
-                                    else "Ввод: " + ", ".join(args[1:]))
+                                    else self.L("in") + ", ".join(args[1:]))
                 return None
             if name in OUT_FUNCS:
                 if code_style:
                     return M.Simple(M.IO, self.t(node))
                 if pretty and nodes:
                     if name in ("printf", "printf_s", "wprintf", "vprintf"):
-                        return M.Simple(M.IO, self._format_call(nodes[0], nodes[1:], "Вывод: "))
+                        return M.Simple(M.IO, self._format_call(nodes[0], nodes[1:], self.L("out")))
                     if name == "fprintf":
-                        return M.Simple(M.IO, self._format_call(nodes[1], nodes[2:], "Вывод: "))
+                        return M.Simple(M.IO, self._format_call(nodes[1], nodes[2:], self.L("out")))
                     if name in ("puts", "fputs", "putchar", "putc"):
-                        return M.Simple(M.IO, self._weave(self._segments(nodes[:1]), "Вывод: "))
+                        return M.Simple(M.IO, self._weave(self._segments(nodes[:1]), self.L("out")))
                 if name in ("fprintf", "putc"):
                     args = args[1:]
                 elif name == "fputs":
                     args = args[:1]
-                return M.Simple(M.IO, "Вывод: " + ", ".join(args) if args else "Вывод")
+                return M.Simple(M.IO, self.L("out") + ", ".join(args)
+                                if args else self.L("out_plain"))
             if name in IN_FUNCS:
                 if code_style:
                     return M.Simple(M.IO, self.t(node))
@@ -548,7 +582,8 @@ class Builder:
                 else:
                     rest = args
                 rest = [a.lstrip("&") for a in rest]
-                return M.Simple(M.IO, "Ввод: " + ", ".join(rest) if rest else "Ввод")
+                return M.Simple(M.IO, self.L("in") + ", ".join(rest)
+                                if rest else self.L("in_plain"))
         return None
 
 
