@@ -78,7 +78,8 @@ def main():
         cmd += ["--hidden-import", mod, "--collect-binaries", mod]
     for mod in ("blockwright.tui", "blockwright.album", "blockwright.png"):
         cmd += ["--hidden-import", mod]
-    cmd.append(os.path.join(BASE, "blockwright", "__main__.py"))
+    cmd += ["--paths", BASE, "--hidden-import", "blockwright"]
+    cmd.append(os.path.join(BASE, "tools", "entry.py"))
 
     print(f"Собираю {args.name} для {platform_tag()} …\n")
     rc = subprocess.call(cmd, cwd=BASE)
