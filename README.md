@@ -26,7 +26,7 @@ Vector SVG for your report — and a real diagram editor in the browser.
 
 <br>
 
-<img src="docs/editor.png" width="880" alt="Browser editor with a generated flowchart">
+<img src="docs/editor-en.png" width="880" alt="Browser editor with a generated flowchart">
 
 </div>
 
@@ -42,15 +42,18 @@ Vector SVG for your report — and a real diagram editor in the browser.
 | ✏ **A real editor** | drag blocks, reshape connectors, re-attach arrows, add shapes from a palette, draw a chart from scratch, undo, export |
 | 📄 **Report ready** | SVG drops into Word as vector, PNG goes straight to the clipboard, every diagram is captioned `Рисунок N — …` |
 | 🎨 **Figma friendly** | arrows are real polygons and shapes sit in named groups, so the file opens as a clean layer tree |
+| 🌗 **Light and dark** | one click switches the interface *and* the charts; the theme you see is the theme you export |
+| 🌍 **Two languages** | Russian and English throughout — interface, terminal picker and the labels on the charts |
 | 🎒 **Portable** | parsers ship with the repository — clone and run, or build a single executable |
 
 > [!NOTE]
-> Diagram labels and the interface are in Russian: the tool targets GOST 19.701-90,
-> the flowchart standard used in Russian engineering coursework. Code, CLI and
-> documentation are in English.
+> The tool targets **GOST 19.701-90**, the flowchart standard used in Russian
+> engineering coursework — but everything it prints can speak English too:
+> `--ui-lang en` (or the **RU/EN** button in the editor) switches the interface,
+> the terminal picker and the words on the charts.
 
 <div align="center">
-  <img src="docs/example-switch.png" width="620" alt="Generated flowchart for a switch statement">
+  <img src="docs/example-switch-en.png" width="620" alt="Generated flowchart for a switch statement">
   <br><sub>A <code>switch</code> turned into a chart — one column per <code>case</code>, captioned and ready for a report</sub>
 </div>
 
@@ -91,7 +94,7 @@ shows how many sources inside are selected). The function list updates as you
 move, and any function can be switched off. Mouse and keyboard both work.
 
 <div align="center">
-  <img src="docs/picker.png" width="880" alt="Terminal source picker">
+  <img src="docs/picker-en.png" width="880" alt="Terminal source picker">
 </div>
 
 > [!TIP]
@@ -124,6 +127,8 @@ python -m blockwright . --list                     # just list what was found
 | `--io-style {pretty,list,code}` | text inside I/O blocks |
 | `--return-style {auto,value,end}` | how `return` is labelled |
 | `--png [SCALE]` | also save `.png` (default ×2, needs Chrome or Edge) |
+| `--theme {light,dark}` | palette for charts and the album |
+| `--ui-lang {ru,en}` | language of the interface and chart labels |
 | `--keep-std` | keep the `std::` prefix |
 | `--width N` | characters per line inside a block (default 38) |
 | `--plain-begin` | write “Начало” instead of the function signature |
@@ -153,8 +158,12 @@ page and the browser redraws it with the same algorithm the Python side uses.
 - **Shortcuts**: <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>,
   <kbd>Ctrl</kbd>+<kbd>D</kbd>, <kbd>Del</kbd>, arrows to nudge, <kbd>Alt</kbd>
   to ignore the grid, <kbd>Shift</kbd> to extend the selection.
-- **＋** starts an empty chart, so you can draw an algorithm that has no code yet.
-- **Проект…** exports every edit and custom chart as one `.json`; **Открыть**
+- **＋** starts an empty chart, so you can draw an algorithm that has no code yet;
+  the ✎ button (or a double click on the name) renames any chart.
+- **Theme and language** switch in the top-right corner and are remembered
+  between sessions, together with the **title** checkbox that decides whether
+  the exported SVG/PNG carries a heading.
+- **Project…** exports every edit and custom chart as one `.json`; **Open**
   loads it back. Edits live in the browser and never touch your files.
 
 ---
@@ -186,8 +195,8 @@ page and the browser redraws it with the same algorithm the Python side uses.
 </details>
 
 <div align="center">
-  <img src="docs/example-main.png" width="420" alt="Generated flowchart for main()">
-  <br><sub><code>main()</code> from <a href="examples/grades.cpp">examples/grades.cpp</a></sub>
+  <img src="docs/example-main-en.png" width="420" alt="Generated flowchart for main()">
+  <br><sub><code>main()</code> from <a href="examples/grades.en.cpp">examples/grades.en.cpp</a></sub>
 </div>
 
 ---

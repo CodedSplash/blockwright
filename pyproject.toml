@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blockwright"
-version = "1.0.0"
+version = "1.1.0"
 description = "Блок-схемы по исходному коду C и C++ в нотации ГОСТ 19.701-90"
 readme = "README.md"
 requires-python = ">=3.10"
