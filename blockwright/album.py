@@ -1,0 +1,1175 @@
+"""Альбом-редактор блок-схем (index.html).
+
+Одностраничное приложение без внешних зависимостей: в файл кладётся
+модель каждой схемы (фигуры, линии, подписи), а браузер рисует её сам
+тем же алгоритмом, что и Python. Это даёт полноценный редактор:
+
+* перетаскивание блоков и изменение их размеров, линии тянутся следом;
+* правка узлов линии, перепривязка концов к другим блокам;
+* создание схем с нуля — палитра блоков, инструмент связи, подписи;
+* отмена/повтор, копирование, выравнивание по сетке;
+* экспорт в SVG (аккуратное дерево слоёв для Figma) и PNG, печать;
+* сохранение в браузере и выгрузка всего проекта одним .json-файлом.
+"""
+
+import json
+
+from .text import xml_escape
+
+CSS = r"""
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#eef1f5; --panel:#fff; --ink:#111820; --muted:#67757f; --line:#dbe2ea;
+  --accent:#2f6fd0; --accent-soft:#e8f0fd; --danger:#c0392b;
+  --shadow:0 1px 2px rgba(16,24,32,.06),0 6px 20px rgba(16,24,32,.07);
+  --font:"Segoe UI","Noto Sans",Inter,Arial,sans-serif;
+}
+html,body{height:100%}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);
+     font-size:14px;overflow:hidden;-webkit-user-select:none;user-select:none}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:var(--panel);border:1px solid var(--line);
+       border-radius:8px;padding:6px 11px}
+button:hover{background:#f4f7fb;border-color:#c3ceda}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#265fb8}
+button.on{background:var(--accent-soft);border-color:#b7d0f2;color:#1d4f9e}
+button.ghost{border-color:transparent;background:transparent}
+button:disabled{opacity:.4;cursor:default}
+.topbar{height:52px;display:flex;align-items:center;gap:8px;padding:0 14px;
+        background:var(--panel);border-bottom:1px solid var(--line);z-index:20}
+.brand{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .sub{color:var(--muted);font-weight:400;font-size:12.5px}
+.grow{flex:1 1 auto}.group{display:flex;gap:6px;align-items:center}
+.sep{width:1px;height:24px;background:var(--line);margin:0 3px}
+.layout{display:flex;height:calc(100vh - 52px)}
+aside{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+aside.nav{flex:0 0 250px;border-right:1px solid var(--line)}
+aside.insp{flex:0 0 280px;border-left:1px solid var(--line);padding:12px 14px;
+           overflow:auto}
+.navhead{display:flex;gap:6px;padding:10px 10px 6px}
+.navhead input{flex:1 1 auto;min-width:0;padding:6px 9px;border:1px solid var(--line);
+               border-radius:8px;background:#fbfcfe}
+.tree{overflow:auto;padding:0 8px 14px;min-height:0;flex:1 1 auto}
+.tree .sec{font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+           color:var(--muted);padding:12px 8px 5px;font-weight:600}
+.tree a{display:flex;gap:6px;align-items:baseline;padding:6px 9px;border-radius:7px;
+        color:var(--ink);text-decoration:none;overflow-wrap:anywhere;line-height:1.35;
+        cursor:pointer}
+.tree a:hover{background:#f2f5f9}
+.tree a.active{background:var(--accent-soft);color:#1d4f9e;font-weight:600}
+.tree a .ln{color:var(--muted);font-size:11.5px;font-weight:400;margin-left:auto}
+.tree a.edited .ln::after{content:" •";color:var(--accent)}
+main{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-height:0}
+.toolbar{height:46px;display:flex;align-items:center;gap:7px;padding:0 12px;
+         border-bottom:1px solid var(--line);background:var(--panel)}
+.toolbar .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toolbar .meta{color:var(--muted);font-size:12.5px;font-family:Consolas,monospace;
+               white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%}
+.zoomval{min-width:50px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.work{flex:1 1 auto;display:flex;min-height:0}
+.palette{flex:0 0 58px;border-right:1px solid var(--line);background:var(--panel);
+         padding:8px 0;display:flex;flex-direction:column;gap:4px;align-items:center;
+         overflow:auto}
+.palette button{width:42px;height:42px;padding:0;display:grid;place-items:center;
+                border-radius:9px}
+.palette .gap{height:8px}
+.palette svg{pointer-events:none}
+.stage{flex:1 1 auto;overflow:auto;padding:22px;min-height:0}
+.sheet{background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:16px;
+       margin:0 auto;width:max-content;max-width:none}
+.sheet svg{display:block;touch-action:none}
+.caption{text-align:center;color:var(--muted);padding:10px 0 24px;font-size:13px}
+.hint{position:absolute;pointer-events:none}
+svg .shp{cursor:move}
+svg .edge-hit{stroke:transparent;stroke-width:12;fill:none;cursor:pointer}
+svg .sel-outline{fill:none;stroke:var(--accent);stroke-width:2;
+                 stroke-dasharray:5 3;pointer-events:none}
+svg .handle{fill:#fff;stroke:var(--accent);stroke-width:1.6;cursor:pointer}
+svg .handle.mid{fill:var(--accent-soft)}
+svg .handle.bound{fill:#2f9e44;stroke:#237032}
+svg .guide{stroke:#e8590c;stroke-width:1;stroke-dasharray:4 3;pointer-events:none}
+svg .marquee{fill:rgba(47,111,208,.10);stroke:var(--accent);stroke-width:1;
+             stroke-dasharray:4 3;pointer-events:none}
+.insp h3{margin:0 0 6px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+         color:var(--muted)}
+.insp label{display:block;font-size:12.5px;color:var(--muted);margin:12px 0 5px}
+.insp select,.insp textarea,.insp input{width:100%;padding:7px 9px;
+  border:1px solid var(--line);border-radius:8px;background:#fbfcfe}
+.insp textarea{min-height:88px;resize:vertical;font-family:Consolas,monospace;
+               font-size:13px;line-height:1.45}
+.insp .row{display:flex;gap:6px;margin-top:10px}
+.insp .row>*{flex:1 1 auto}
+.insp .note{color:var(--muted);font-size:12.2px;line-height:1.55;margin-top:14px}
+.insp .kbd{font-family:Consolas,monospace;background:#f1f4f8;border:1px solid var(--line);
+           border-radius:4px;padding:0 4px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,14px);
+       background:#111820;color:#fff;padding:9px 16px;border-radius:9px;font-size:13px;
+       opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media print{
+  body{overflow:visible;background:#fff}
+  .topbar,aside,.toolbar,.palette{display:none!important}
+  .layout,.work{display:block;height:auto}
+  .stage{overflow:visible;padding:0}
+  .sheet{box-shadow:none;border-radius:0;padding:0;width:auto}
+  svg .handle,svg .sel-outline,svg .guide,svg .marquee{display:none}
+}
+"""
+
+JS_CORE = r"""
+'use strict';
+const FS=13, LH=17, PADX=14, PADY=10, MINW=128, MINH=44, RATIO=.6, LBL=12;
+const MARGIN=26, TITLE_H=34, ARROW_LEN=9, ARROW_HALF=3.6, GRID=5, PAD=60;
+const STUB=20, CORNER=6;
+const MONO="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', 'Courier New', monospace";
+const UI="Segoe UI, 'Noto Sans', Arial, sans-serif";
+const STROKE="#1f2933", INK="#10151b";
+const FILL={process:"#ffffff",io:"#eef4ff",decision:"#fff6e5",terminator:"#e9f3ec",
+            predefined:"#f3eefc",preparation:"#e8f5f1",connector:"#ffffff"};
+const KIND_RU={process:"Процесс",io:"ВводВывод",decision:"Решение",
+               terminator:"Терминатор",predefined:"Подпрограмма",
+               preparation:"Цикл",connector:"Соединитель"};
+const KIND_LABEL={terminator:"Начало / конец",process:"Процесс",io:"Ввод-вывод",
+                  decision:"Решение",predefined:"Предопределённый процесс",
+                  preparation:"Подготовка (цикл)",connector:"Соединитель"};
+const KINDS=["terminator","process","io","decision","predefined","preparation","connector"];
+const STORE='blockwright.v1';
+
+/* ---------- текст и размеры ---------- */
+function norm(s){return String(s==null?'':s).replace(/[\r\n\t]/g,' ')
+  .replace(/\s+/g,' ').replace(/\s*,\s*/g,', ').trim();}
+function hardSplit(tok,w){
+  const parts=[];let cur='';
+  for(const p of tok.split(/(?<=[,;.:_>])/)){if(!p)continue;
+    if(cur&&cur.length+p.length>w){parts.push(cur);cur=p;}else cur+=p;}
+  if(cur)parts.push(cur);
+  const out=[];
+  for(let p of parts){while(p.length>w){out.push(p.slice(0,w));p=p.slice(w);}if(p)out.push(p);}
+  return out.length?out:[tok];
+}
+function wrap(text,w){
+  text=norm(text); if(!text)return[''];
+  if(text.length<=w)return[text];
+  const lines=[];let cur='';
+  for(const word of text.split(' ')){
+    if(word.length>w){if(cur){lines.push(cur);cur='';}
+      const ch=hardSplit(word,w);lines.push(...ch.slice(0,-1));cur=ch[ch.length-1];continue;}
+    const cand=cur?cur+' '+word:word;
+    if(cand.length<=w)cur=cand;else{lines.push(cur);cur=word;}}
+  if(cur)lines.push(cur);
+  return lines;
+}
+const r2=v=>Math.round(v*100)/100;
+const n=v=>v.toFixed(2).replace(/\.?0+$/,'');
+function sizeFor(kind,text,maxChars){
+  const lines=wrap(text,maxChars);
+  const tw=Math.max(...lines.map(l=>l.length))*FS*RATIO, th=lines.length*LH;
+  let w,h;
+  if(kind==='connector'){const d=Math.max(40,tw+16,th+16);w=d;h=d;}
+  else if(kind==='decision'){h=Math.max(58,th*2+18);w=Math.max(150,tw*1.75+28);}
+  else if(kind==='preparation'){h=Math.max(MINH,th+2*PADY);w=Math.max(MINW,tw+2*PADX+h*.8);}
+  else if(kind==='io'){h=Math.max(MINH,th+2*PADY);w=Math.max(MINW,tw+2*PADX+h*.5);}
+  else if(kind==='predefined'){h=Math.max(MINH,th+2*PADY);w=Math.max(MINW,tw+2*PADX+28);}
+  else if(kind==='terminator'){h=Math.max(42,th+2*PADY-2);w=Math.max(MINW,tw+2*PADX+h*.6);}
+  else{h=Math.max(MINH,th+2*PADY);w=Math.max(MINW,tw+2*PADX);}
+  return{w:r2(w),h:r2(h),lines};
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function slug(t,lim){lim=lim||28;
+  const s=String(t||'').trim().replace(/[^0-9A-Za-zА-Яа-яЁё_-]+/g,'_')
+    .replace(/_+/g,'_').replace(/^_|_$/g,'');
+  return s.slice(0,lim)||'блок';}
+let _uid=0; const uid=p=>p+'_'+(Date.now()%100000).toString(36)+(_uid++).toString(36);
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+/* ---------- отрисовка ---------- */
+function bbox(m){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  const put=(x,y)=>{if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;};
+  for(const s of m.shapes){put(s.x,s.y);put(s.x+s.w,s.y+s.h);}
+  for(const e of m.edges)for(const p of e.points)put(p[0],p[1]);
+  for(const l of m.labels){const w=l.text.length*LBL*.6;
+    if(l.anchor==='start'){put(l.x,l.y);put(l.x+w,l.y);}
+    else if(l.anchor==='end'){put(l.x-w,l.y);put(l.x,l.y);}
+    else{put(l.x-w/2,l.y);put(l.x+w/2,l.y);}
+    put(l.x,l.y-LBL);}
+  if(!isFinite(x0))return{x0:0,y0:0,x1:200,y1:120};
+  return{x0,y0,x1,y1};
+}
+function outline(s){
+  const x=s.x,y=s.y,w=s.w,h=s.h,k=s.kind;
+  const st=`fill="${FILL[k]||'#fff'}" stroke="${STROKE}" stroke-width="1.6"`;
+  if(k==='terminator')return[`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" rx="${n(h/2)}" ry="${n(h/2)}" ${st}/>`];
+  if(k==='decision')return[`<polygon points="${n(x+w/2)},${n(y)} ${n(x+w)},${n(y+h/2)} ${n(x+w/2)},${n(y+h)} ${n(x)},${n(y+h/2)}" ${st}/>`];
+  if(k==='io'){const s2=Math.min(h*.34,w*.3);
+    return[`<polygon points="${n(x+s2)},${n(y)} ${n(x+w)},${n(y)} ${n(x+w-s2)},${n(y+h)} ${n(x)},${n(y+h)}" ${st}/>`];}
+  if(k==='preparation'){const c=Math.min(h*.5,w*.25);
+    return[`<polygon points="${n(x+c)},${n(y)} ${n(x+w-c)},${n(y)} ${n(x+w)},${n(y+h/2)} ${n(x+w-c)},${n(y+h)} ${n(x+c)},${n(y+h)} ${n(x)},${n(y+h/2)}" ${st}/>`];}
+  if(k==='predefined'){const o=[`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" ${st}/>`];
+    for(const dx of[11,w-11])o.push(`<line x1="${n(x+dx)}" y1="${n(y)}" x2="${n(x+dx)}" y2="${n(y+h)}" stroke="${STROKE}" stroke-width="1.4"/>`);
+    return o;}
+  if(k==='connector')return[`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}" ${st}/>`];
+  return[`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" rx="2" ry="2" ${st}/>`];
+}
+function shapeText(s,maxChars){
+  const lines=wrap(s.text,maxChars);
+  const cx=s.x+s.w/2, cy=s.y+s.h/2, y0=cy-(lines.length-1)*LH/2+FS*.36;
+  return lines.map((ln,i)=>`<text x="${n(cx)}" y="${n(y0+i*LH)}" text-anchor="middle" font-family="${MONO}" font-size="${FS}" fill="${INK}">${esc(ln)}</text>`);
+}
+function cleanPts(pts){
+  const cl=[pts[0]];
+  for(const p of pts.slice(1)){const q=cl[cl.length-1];
+    if(Math.abs(p[0]-q[0])>.01||Math.abs(p[1]-q[1])>.01)cl.push(p);}
+  return cl;
+}
+/* полилиния со скруглёнными углами — углы 90° выглядят мягче и ровнее */
+function roundPath(pts,r){
+  if(pts.length<3)
+    return 'M'+pts.map(p=>n(p[0])+','+n(p[1])).join(' L');
+  let d='M'+n(pts[0][0])+','+n(pts[0][1]);
+  for(let i=1;i<pts.length-1;i++){
+    const a=pts[i-1],c=pts[i],b=pts[i+1];
+    const l1=Math.hypot(c[0]-a[0],c[1]-a[1]),l2=Math.hypot(b[0]-c[0],b[1]-c[1]);
+    const cross=Math.abs((c[0]-a[0])*(b[1]-c[1])-(c[1]-a[1])*(b[0]-c[0]));
+    const rr=Math.min(r,l1/2,l2/2);
+    if(rr<1||cross<1||!l1||!l2){d+=' L'+n(c[0])+','+n(c[1]);continue;}
+    d+=' L'+n(c[0]+(a[0]-c[0])/l1*rr)+','+n(c[1]+(a[1]-c[1])/l1*rr)+
+       ' Q'+n(c[0])+','+n(c[1])+' '+
+       n(c[0]+(b[0]-c[0])/l2*rr)+','+n(c[1]+(b[1]-c[1])/l2*rr);
+  }
+  const last=pts[pts.length-1];
+  return d+' L'+n(last[0])+','+n(last[1]);
+}
+function edgeSvg(e){
+  if(e.points.length<2)return[];
+  let pts=cleanPts(e.points); if(pts.length<2)return[];
+  const out=[];
+  if(e.arrow!==false){
+    const a=pts[pts.length-2],b=pts[pts.length-1];
+    const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1;
+    const ux=dx/L,uy=dy/L,bx=b[0]-ux*ARROW_LEN,by=b[1]-uy*ARROW_LEN;
+    const px=-uy*ARROW_HALF,py=ux*ARROW_HALF;
+    if(L>ARROW_LEN)pts=pts.slice(0,-1).concat([[bx,by]]);
+    out.push(`<path d="M${n(b[0])},${n(b[1])} L${n(bx+px)},${n(by+py)} L${n(bx-px)},${n(by-py)} Z" fill="${STROKE}"/>`);
+  }
+  out.unshift(`<path d="${roundPath(pts,CORNER)}" fill="none" stroke="${STROKE}" stroke-width="1.5" stroke-linecap="round"/>`);
+  return out;
+}
+function labelSvg(l){
+  return `<text x="${n(l.x)}" y="${n(l.y)}" text-anchor="${l.anchor}" font-family="${UI}" font-size="${LBL}" fill="${INK}">${esc(l.text)}</text>`;
+}
+/* view=null -> поля по содержимому (экспорт); иначе фиксированная область (холст) */
+function renderSVG(m,opt){
+  opt=opt||{};
+  const b=opt.view||bbox(m), title=opt.title||null;
+  const top=MARGIN+(title?TITLE_H:0);
+  const W=(b.x1-b.x0)+2*MARGIN, H=(b.y1-b.y0)+MARGIN+top;
+  const dx=MARGIN-b.x0, dy=top-b.y0;
+  const parts=[`<rect id="Фон" x="0" y="0" width="${n(W)}" height="${n(H)}" fill="#ffffff"/>`];
+  if(title)parts.push(`<text id="Заголовок" x="${n(W/2)}" y="${n(MARGIN+6)}" text-anchor="middle" font-family="${UI}" font-size="15" font-weight="600" fill="${INK}">${esc(title)}</text>`);
+  const lines=[],hits=[];
+  for(const e of m.edges){
+    lines.push(...edgeSvg(e));
+    if(opt.interactive&&e.points.length>1)
+      hits.push(`<polyline class="edge-hit" data-edge="${esc(e.id)}" points="${e.points.map(p=>n(p[0])+','+n(p[1])).join(' ')}"/>`);
+  }
+  const labels=m.labels.map(l=>opt.interactive
+    ?`<g data-label="${esc(l.id)}" style="cursor:move">${labelSvg(l)}</g>`:labelSvg(l));
+  const shapes=m.shapes.map((s,i)=>{
+    const gid=`${String(i+1).padStart(2,'0')}_${KIND_RU[s.kind]||'Блок'}_${slug(s.text)}`;
+    const inner=outline(s).concat(shapeText(s,m.maxChars)).join('\n  ');
+    const extra=opt.interactive?` class="shp" data-shape="${esc(s.id)}"`:'';
+    return `<g id="${esc(gid)}"${extra}>\n  ${inner}\n</g>`;});
+  parts.push(`<g id="${esc(slug(opt.name||'Блок-схема',48))}" transform="translate(${n(dx)},${n(dy)})">`);
+  parts.push('<g id="Связи">\n'+lines.join('\n')+'\n</g>');
+  if(labels.length)parts.push('<g id="Подписи">\n'+labels.join('\n')+'\n</g>');
+  parts.push('<g id="Блоки">\n'+shapes.join('\n')+'\n</g>');
+  if(opt.interactive){parts.push('<g id="__hit">\n'+hits.join('\n')+'\n</g>');
+                      parts.push('<g id="__ui"></g>');}
+  parts.push('</g>');
+  const head=`<svg xmlns="http://www.w3.org/2000/svg" width="${n(W)}" height="${n(H)}" viewBox="0 0 ${n(W)} ${n(H)}" role="img">`;
+  return{svg:head+'\n'+parts.join('\n')+'\n</svg>',w:W,h:H,dx,dy};
+}
+
+/* ---------- модель: привязки и маршруты ---------- */
+function anchors(s){return{top:[s.x+s.w/2,s.y],bottom:[s.x+s.w/2,s.y+s.h],
+  left:[s.x,s.y+s.h/2],right:[s.x+s.w,s.y+s.h/2]};}
+function anchorPt(m,ref){
+  const s=m.shapes.find(x=>x.id===ref.id); if(!s)return null;
+  return anchors(s)[ref.port]||null;
+}
+function hydrate(m){
+  m.maxChars=m.maxChars||38;
+  m.shapes=m.shapes||[];m.edges=m.edges||[];m.labels=m.labels||[];
+  for(const s of m.shapes)if(!s.id)s.id=uid('s');
+  for(const l of m.labels){
+    if(!l.id)l.id=uid('l');
+    if(l.near===undefined)l.near=nearestAnchor(m,l);
+  }
+  for(const e of m.edges){
+    if(!e.id)e.id=uid('e');
+    if(e.arrow===undefined)e.arrow=true;
+    if(e.from===undefined)e.from=findAnchor(m,e.points[0]);
+    if(e.to===undefined)e.to=e.arrow?findAnchor(m,e.points[e.points.length-1]):null;
+  }
+  return m;
+}
+/* подпись считается «приклеенной» к вершине блока, если стоит вплотную к ней */
+function nearestAnchor(m,l){
+  let best=null,bd=34;
+  for(const s of m.shapes){
+    const a=anchors(s);
+    for(const port of['left','right','top','bottom']){
+      const d=Math.hypot(a[port][0]-l.x,a[port][1]-l.y);
+      if(d<bd){bd=d;best={id:s.id,port,ox:r2(l.x-a[port][0]),oy:r2(l.y-a[port][1])};}
+    }
+  }
+  return best;
+}
+function findAnchor(m,pt,tol){
+  tol=tol||3; let best=null,bd=tol;
+  for(const s of m.shapes){
+    const a=anchors(s);
+    for(const port of['top','bottom','left','right']){
+      const d=Math.hypot(a[port][0]-pt[0],a[port][1]-pt[1]);
+      if(d<=bd){bd=d;best={id:s.id,port};}
+    }
+  }
+  return best;
+}
+/* убирает узлы, лежащие на прямой между соседями */
+function simplify(e){
+  const p=e.points;
+  for(let i=p.length-2;i>0;i--){
+    if((i===1&&e.from)||(i===p.length-2&&e.to))continue;   // прямой подход к блоку
+    const a=p[i-1],b=p[i],c=p[i+1];
+    if((Math.abs(a[0]-b[0])<.6&&Math.abs(b[0]-c[0])<.6)||
+       (Math.abs(a[1]-b[1])<.6&&Math.abs(b[1]-c[1])<.6))p.splice(i,1);
+  }
+}
+const NORMAL={top:[0,-1],bottom:[0,1],left:[-1,0],right:[1,0]};
+/* Линия обязана подходить к блоку строго по нормали к его стороне и иметь
+   прямой участок: иначе стрелка «косит», а линия норовит уйти назад сквозь
+   фигуру. Если подход испорчен, ближний кусок прокладывается заново:
+   выход по нормали -> поворот -> ближайший «живой» узел линии. */
+function fixEnd(e,isFrom){
+  const ref=isFrom?e.from:e.to; if(!ref)return;
+  const nrm=NORMAL[ref.port]; if(!nrm||e.points.length<2)return;
+  const last=e.points.length-1;
+  const idx=isFrom?0:last, j=isFrom?1:last-1;
+  const p=e.points[idx], q=e.points[j];
+  const along=(q[0]-p[0])*nrm[0]+(q[1]-p[1])*nrm[1];
+  const side=(q[0]-p[0])*nrm[1]-(q[1]-p[1])*nrm[0];
+  if(Math.abs(side)<.6&&along>=STUB-.6)return;      // подход уже правильный
+  let k=j;                                          // опорный узел
+  if(along<0&&e.points.length>2)k=isFrom?2:last-2;  // сосед оказался позади
+  const target=e.points[k];
+  const s=[r2(p[0]+nrm[0]*STUB),r2(p[1]+nrm[1]*STUB)];
+  const vert=(nrm[0]===0);
+  const mid=vert?[r2(target[0]),s[1]]:[s[0],r2(target[1])];
+  const ins=[s];
+  if(Math.hypot(mid[0]-s[0],mid[1]-s[1])>.6&&
+     Math.hypot(mid[0]-target[0],mid[1]-target[1])>.6)ins.push(mid);
+  if(isFrom)e.points.splice(1,k-1,...ins);
+  else e.points.splice(k+1,last-k-1,...ins.reverse());
+}
+/* Конец линии переезжает вместе со «своим» блоком.
+   Соседний узел подтягивается только если он не привязан к другому блоку —
+   иначе линия отрывалась бы от соседа; вместо этого добавляется излом. */
+function syncEdges(m,shapeIds){
+  const ids=new Set(shapeIds);
+  for(const e of m.edges){
+    let touched=false;
+    for(const idx of [0,e.points.length-1]){
+      const ref=idx===0?e.from:e.to;
+      if(!ref||!ids.has(ref.id))continue;
+      const np=anchorPt(m,ref); if(!np)continue;
+      const old=e.points[idx].slice();
+      const dx=np[0]-old[0], dy=np[1]-old[1];
+      if(!dx&&!dy)continue;
+      e.points[idx]=[r2(np[0]),r2(np[1])];
+      touched=true;
+      const j=idx===0?1:idx-1;
+      if(j<0||j>e.points.length-1)continue;
+      const neighbourBound=(j===0&&e.from)||(j===e.points.length-1&&e.to);
+      if(neighbourBound)continue;          // это чужой привязанный конец
+      const q=e.points[j];
+      if(Math.abs(q[0]-old[0])<1.2)q[0]=r2(q[0]+dx);
+      if(Math.abs(q[1]-old[1])<1.2)q[1]=r2(q[1]+dy);
+    }
+    if(touched){fixEnd(e,true);fixEnd(e,false);simplify(e);}
+  }
+  /* подписи «Да»/«Нет» приклеены к вершинам блока и едут вместе с ним */
+  for(const l of m.labels){
+    if(!l.near||!ids.has(l.near.id))continue;
+    const s=m.shapes.find(x=>x.id===l.near.id); if(!s)continue;
+    const a=anchors(s)[l.near.port]; if(!a)continue;
+    l.x=r2(a[0]+l.near.ox); l.y=r2(a[1]+l.near.oy);
+  }
+}
+/* проложить линию заново между её блоками */
+function rerouteEdge(m,e){
+  if(!e.from||!e.to)return false;
+  const a=m.shapes.find(s=>s.id===e.from.id), b=m.shapes.find(s=>s.id===e.to.id);
+  if(!a||!b)return false;
+  const r=autoRoute(m,a,b);
+  e.points=r.pts.map(p=>[r2(p[0]),r2(p[1])]);
+  e.from={id:a.id,port:r.from}; e.to={id:b.id,port:r.to};
+  return true;
+}
+function autoRoute(m,a,b){
+  const A=anchors(a),B=anchors(b);
+  if(b.y>a.y+a.h-2){
+    const mid=r2((a.y+a.h+b.y)/2);
+    if(Math.abs(A.bottom[0]-B.top[0])<2)return{pts:[A.bottom,B.top],from:'bottom',to:'top'};
+    return{pts:[A.bottom,[A.bottom[0],mid],[B.top[0],mid],B.top],from:'bottom',to:'top'};
+  }
+  if(b.y+b.h<a.y+2){
+    const side=r2(Math.min(a.x,b.x)-34), y1=r2(a.y+a.h+20), y2=r2(b.y-20);
+    return{pts:[A.bottom,[A.bottom[0],y1],[side,y1],[side,y2],[B.top[0],y2],B.top],
+           from:'bottom',to:'top'};
+  }
+  const right=b.x>a.x;
+  const p1=right?A.right:A.left, p2=right?B.left:B.right;
+  const mx=r2((p1[0]+p2[0])/2);
+  return{pts:[p1,[mx,p1[1]],[mx,p2[1]],p2],from:right?'right':'left',
+         to:right?'left':'right'};
+}
+/* «разрезать» схему по горизонтали и раздвинуть — когда блок стал выше */
+function shiftBelow(m,threshold,delta){
+  if(!delta)return;
+  for(const s of m.shapes)if(s.y>=threshold-.5)s.y=r2(s.y+delta);
+  for(const e of m.edges)e.points=e.points.map(p=>
+    [p[0],p[1]>=threshold-.5?r2(p[1]+delta):p[1]]);
+  for(const l of m.labels)if(l.y>=threshold-.5)l.y=r2(l.y+delta);
+}
+function newShape(kind,x,y,text,maxChars){
+  const g=sizeFor(kind,text,maxChars||38);
+  return{id:uid('s'),kind,text,x:r2(x-g.w/2),y:r2(y-g.h/2),w:g.w,h:g.h};
+}
+function emptyDoc(name){
+  const m={name,rel:'мои схемы',signature:'',line:0,maxChars:38,
+           shapes:[],edges:[],labels:[]};
+  const a=newShape('terminator',300,80,'Начало',38);
+  const b=newShape('terminator',300,320,'Конец',38);
+  m.shapes.push(a,b);
+  const r=autoRoute(m,a,b);
+  m.edges.push({id:uid('e'),points:r.pts.map(p=>[r2(p[0]),r2(p[1])]),arrow:true,
+                from:{id:a.id,port:r.from},to:{id:b.id,port:r.to}});
+  return m;
+}
+"""
+
+JS_APP = r"""
+/* ---------- состояние ---------- */
+const $=s=>document.querySelector(s);
+let docs={}, custom=[], dirty=new Set(), cur=null, view=null, zoom=1;
+let sel={shapes:new Set(),edges:new Set(),labels:new Set()};
+let tool='select', hist=[], future=[], drag=null, pending=null, guides=[];
+
+function loadStore(){
+  try{const raw=JSON.parse(localStorage.getItem(STORE)||'{}');
+    docs=raw.docs||{}; custom=raw.custom||[]; dirty=new Set(raw.dirty||[]);}
+  catch(e){docs={};custom=[];dirty=new Set();}
+}
+function saveStore(){
+  /* храним только то, что правили вручную, и свои схемы */
+  const keep={}, mine=new Set(custom.map(c=>c.anchor));
+  for(const k of Object.keys(docs))if(dirty.has(k)||mine.has(k))keep[k]=docs[k];
+  try{localStorage.setItem(STORE,JSON.stringify({docs:keep,custom,dirty:[...dirty]}));}
+  catch(e){toast('Не удалось сохранить — хранилище браузера переполнено');}
+}
+function entries(){
+  return DATA.items.concat(custom.map(c=>({anchor:c.anchor,name:c.name,rel:'Мои схемы',
+    signature:'создано вручную',line:0,custom:true})));
+}
+function meta(){return entries().find(i=>i.anchor===cur);}
+function model(){
+  if(!docs[cur]){
+    const it=meta();
+    const base=it&&it.model?clone(it.model):emptyDoc(it?it.name:'Схема');
+    docs[cur]=hydrate(base);
+  }
+  return docs[cur];
+}
+function isEdited(a){return dirty.has(a);}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);}
+
+function push(){hist.push(clone(model()));if(hist.length>80)hist.shift();
+  future.length=0; dirty.add(cur);}
+function commit(){saveStore();draw();buildTree($('#search').value);inspect();}
+function undo(){if(!hist.length)return;future.push(clone(model()));
+  docs[cur]=hist.pop();clearSel();commit();}
+function redo(){if(!future.length)return;hist.push(clone(model()));
+  docs[cur]=future.pop();clearSel();commit();}
+
+/* ---------- выделение ---------- */
+function clearSel(){sel={shapes:new Set(),edges:new Set(),labels:new Set()};}
+function selCount(){return sel.shapes.size+sel.edges.size+sel.labels.size;}
+function selectOnly(kind,id){clearSel();sel[kind].add(id);}
+
+/* ---------- отрисовка холста ---------- */
+function ensureView(m,reset){
+  const b=bbox(m);
+  if(reset||!view){view={x0:b.x0-PAD,y0:b.y0-PAD,x1:b.x1+PAD,y1:b.y1+PAD};return;}
+  view={x0:Math.min(view.x0,b.x0-PAD),y0:Math.min(view.y0,b.y0-PAD),
+        x1:Math.max(view.x1,b.x1+PAD),y1:Math.max(view.y1,b.y1+PAD)};
+}
+function draw(){
+  const m=model(); ensureView(m,false);
+  const out=renderSVG(m,{interactive:true,view,name:meta().name});
+  $('#sheet').innerHTML=out.svg;
+  const svg=$('#sheet svg');
+  svg.style.width=(out.w*zoom)+'px'; svg.style.height=(out.h*zoom)+'px';
+  $('#zoomVal').textContent=Math.round(zoom*100)+'%';
+  drawUI();
+  svg.addEventListener('pointerdown',onDown);
+  svg.addEventListener('pointermove',onMove);
+  svg.addEventListener('pointerup',onUp);
+  svg.addEventListener('dblclick',onDbl);
+}
+function ui(){return $('#__ui');}
+function drawUI(){
+  const g=ui(); if(!g)return;
+  const m=model(); const parts=[];
+  for(const id of sel.shapes){
+    const s=m.shapes.find(x=>x.id===id); if(!s)continue;
+    parts.push(`<rect class="sel-outline" x="${n(s.x-4)}" y="${n(s.y-4)}" width="${n(s.w+8)}" height="${n(s.h+8)}" rx="3"/>`);
+    if(sel.shapes.size===1){
+      const a=[[s.x+s.w,s.y+s.h/2,'e'],[s.x+s.w/2,s.y+s.h,'s'],[s.x+s.w,s.y+s.h,'se']];
+      for(const [x,y,dir] of a)
+        parts.push(`<rect class="handle" data-resize="${dir}" x="${n(x-4)}" y="${n(y-4)}" width="8" height="8" rx="2"/>`);
+    }
+  }
+  for(const id of sel.edges){
+    const e=m.edges.find(x=>x.id===id); if(!e)continue;
+    e.points.forEach((p,i)=>{
+      const bound=(i===0&&e.from)||(i===e.points.length-1&&e.to);
+      parts.push(`<circle class="handle${bound?' bound':''}" data-vtx="${esc(e.id)}:${i}" cx="${n(p[0])}" cy="${n(p[1])}" r="5"/>`);
+      if(i<e.points.length-1){const q=e.points[i+1];
+        parts.push(`<circle class="handle mid" data-mid="${esc(e.id)}:${i}" cx="${n((p[0]+q[0])/2)}" cy="${n((p[1]+q[1])/2)}" r="3.6"/>`);}
+    });
+  }
+  for(const id of sel.labels){
+    const l=m.labels.find(x=>x.id===id); if(!l)continue;
+    const w=l.text.length*LBL*.6;
+    const x=l.anchor==='start'?l.x:(l.anchor==='end'?l.x-w:l.x-w/2);
+    parts.push(`<rect class="sel-outline" x="${n(x-3)}" y="${n(l.y-LBL-2)}" width="${n(w+6)}" height="${n(LBL+7)}" rx="2"/>`);
+  }
+  for(const gd of guides)parts.push(`<line class="guide" x1="${n(gd[0])}" y1="${n(gd[1])}" x2="${n(gd[2])}" y2="${n(gd[3])}"/>`);
+  if(drag&&drag.type==='marquee'){
+    const[x0,y0]=drag.from,[x1,y1]=drag.at;
+    parts.push(`<rect class="marquee" x="${n(Math.min(x0,x1))}" y="${n(Math.min(y0,y1))}" width="${n(Math.abs(x1-x0))}" height="${n(Math.abs(y1-y0))}"/>`);
+  }
+  if(pending){const a=pending.shape,A=anchors(a);
+    parts.push(`<circle class="handle bound" cx="${n(A.bottom[0])}" cy="${n(A.bottom[1])}" r="5"/>`);
+    if(pending.at)parts.push(`<line class="guide" x1="${n(A.bottom[0])}" y1="${n(A.bottom[1])}" x2="${n(pending.at[0])}" y2="${n(pending.at[1])}"/>`);}
+  g.innerHTML=parts.join('\n');
+}
+
+/* ---------- координаты ---------- */
+function pt(ev){
+  const svg=$('#sheet svg'), scene=svg.querySelector('#__ui').parentNode;
+  const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY;
+  const q=p.matrixTransform(scene.getScreenCTM().inverse());
+  return[q.x,q.y];
+}
+const snap=(v,off)=>off?v:Math.round(v/GRID)*GRID;
+function hitShape(m,p){
+  for(let i=m.shapes.length-1;i>=0;i--){const s=m.shapes[i];
+    if(p[0]>=s.x&&p[0]<=s.x+s.w&&p[1]>=s.y&&p[1]<=s.y+s.h)return s;}
+  return null;
+}
+
+/* ---------- мышь ---------- */
+function onDown(ev){
+  if(ev.button!==0)return;
+  const m=model(), p=pt(ev), t=ev.target;
+  try{$('#sheet svg').setPointerCapture(ev.pointerId);}catch(e){}
+  if(tool.startsWith('add:')){
+    push(); const kind=tool.slice(4);
+    const s=newShape(kind,snap(p[0],ev.altKey),snap(p[1],ev.altKey),
+                     kind==='decision'?'условие':'действие',m.maxChars);
+    m.shapes.push(s); selectOnly('shapes',s.id); setTool('select'); commit(); return;
+  }
+  if(tool==='label'){
+    push(); const l={id:uid('l'),x:r2(p[0]),y:r2(p[1]),text:'подпись',anchor:'start'};
+    m.labels.push(l); selectOnly('labels',l.id); setTool('select'); commit(); return;
+  }
+  if(tool==='connect'){
+    const s=hitShape(m,p);
+    if(!s){pending=null;drawUI();return;}
+    if(!pending){pending={shape:s,at:p};drawUI();return;}
+    if(pending.shape.id!==s.id){
+      push(); const r=autoRoute(m,pending.shape,s);
+      m.edges.push({id:uid('e'),points:r.pts.map(q=>[r2(q[0]),r2(q[1])]),arrow:true,
+        from:{id:pending.shape.id,port:r.from},to:{id:s.id,port:r.to}});
+      commit();
+    }
+    pending=null; setTool('select'); drawUI(); return;
+  }
+  const resize=t.getAttribute&&t.getAttribute('data-resize');
+  const vtx=t.getAttribute&&t.getAttribute('data-vtx');
+  const mid=t.getAttribute&&t.getAttribute('data-mid');
+  if(mid){
+    const[eid,i]=mid.split(':'); const e=m.edges.find(x=>x.id===eid);
+    push(); const a=e.points[+i],b=e.points[+i+1];
+    e.points.splice(+i+1,0,[r2((a[0]+b[0])/2),r2((a[1]+b[1])/2)]);
+    drag={type:'vtx',edge:eid,idx:+i+1}; commit(); return;
+  }
+  if(vtx){const[eid,i]=vtx.split(':'); push(); drag={type:'vtx',edge:eid,idx:+i};return;}
+  if(resize){const id=[...sel.shapes][0]; push();
+    drag={type:'resize',dir:resize,id,from:p,
+          orig:clone(m.shapes.find(s=>s.id===id))};return;}
+  const shapeEl=t.closest&&t.closest('[data-shape]');
+  const edgeEl=t.closest&&t.closest('[data-edge]');
+  const labelEl=t.closest&&t.closest('[data-label]');
+  if(shapeEl){
+    const id=shapeEl.getAttribute('data-shape');
+    if(ev.shiftKey)sel.shapes.has(id)?sel.shapes.delete(id):sel.shapes.add(id);
+    else if(!sel.shapes.has(id))selectOnly('shapes',id);
+    push();
+    drag={type:'move',from:p,at:p,
+          orig:m.shapes.filter(s=>sel.shapes.has(s.id)).map(s=>({id:s.id,x:s.x,y:s.y})),
+          origL:m.labels.filter(l=>sel.labels.has(l.id)).map(l=>({id:l.id,x:l.x,y:l.y}))};
+    inspect(); drawUI(); return;
+  }
+  if(labelEl){
+    const id=labelEl.getAttribute('data-label');
+    if(!ev.shiftKey)clearSel(); sel.labels.add(id); push();
+    const l=m.labels.find(x=>x.id===id);
+    drag={type:'move',from:p,at:p,orig:[],origL:[{id,x:l.x,y:l.y}]};
+    inspect(); drawUI(); return;
+  }
+  if(edgeEl){
+    const id=edgeEl.getAttribute('data-edge');
+    if(!ev.shiftKey)clearSel(); sel.edges.add(id);
+    inspect(); drawUI(); return;
+  }
+  if(!ev.shiftKey)clearSel();
+  drag={type:'marquee',from:p,at:p}; inspect(); drawUI();
+}
+function onMove(ev){
+  if(!drag&&!pending)return;
+  const m=model(), p=pt(ev);
+  if(pending){pending.at=p;drawUI();return;}
+  if(drag.type==='marquee'){drag.at=p;drawUI();return;}
+  if(drag.type==='move'){
+    let dx=p[0]-drag.from[0], dy=p[1]-drag.from[1];
+    guides=[];
+    if(!ev.altKey&&drag.orig.length===1){
+      const s=m.shapes.find(x=>x.id===drag.orig[0].id);
+      const cx=drag.orig[0].x+dx+s.w/2;
+      for(const o of m.shapes){
+        if(o.id===s.id)continue;
+        const ox=o.x+o.w/2;
+        if(Math.abs(ox-cx)<7){dx+=ox-cx;
+          guides.push([ox,Math.min(o.y,drag.orig[0].y+dy)-30,ox,
+                       Math.max(o.y+o.h,drag.orig[0].y+dy+s.h)+30]);break;}
+      }
+    }
+    for(const o of drag.orig){const s=m.shapes.find(x=>x.id===o.id);
+      s.x=r2(snap(o.x+dx,ev.altKey)); s.y=r2(snap(o.y+dy,ev.altKey));}
+    for(const o of drag.origL){const l=m.labels.find(x=>x.id===o.id);
+      l.x=r2(o.x+dx); l.y=r2(o.y+dy);}
+    syncEdges(m,drag.orig.map(o=>o.id));
+    drag.at=p; redrawFast(); return;
+  }
+  if(drag.type==='resize'){
+    const s=m.shapes.find(x=>x.id===drag.id), o=drag.orig;
+    if(drag.dir!=='s')s.w=r2(Math.max(60,snap(o.w+(p[0]-drag.from[0]),ev.altKey)));
+    if(drag.dir!=='e')s.h=r2(Math.max(34,snap(o.h+(p[1]-drag.from[1]),ev.altKey)));
+    syncEdges(m,[s.id]); redrawFast(); return;
+  }
+  if(drag.type==='vtx'){
+    const e=m.edges.find(x=>x.id===drag.edge); if(!e)return;
+    e.points[drag.idx]=[r2(snap(p[0],ev.altKey)),r2(snap(p[1],ev.altKey))];
+    if(drag.idx===0)e.from=null;
+    if(drag.idx===e.points.length-1)e.to=null;
+    redrawFast(); return;
+  }
+}
+function onUp(ev){
+  const m=model();
+  if(drag&&drag.type==='marquee'){
+    const[x0,y0]=drag.from,[x1,y1]=drag.at;
+    const a=[Math.min(x0,x1),Math.min(y0,y1),Math.max(x0,x1),Math.max(y0,y1)];
+    if(Math.abs(x1-x0)>3||Math.abs(y1-y0)>3){
+      for(const s of m.shapes)
+        if(s.x>=a[0]&&s.y>=a[1]&&s.x+s.w<=a[2]&&s.y+s.h<=a[3])sel.shapes.add(s.id);
+      for(const l of m.labels)
+        if(l.x>=a[0]&&l.y>=a[1]&&l.x<=a[2]&&l.y<=a[3])sel.labels.add(l.id);
+    }
+  }
+  if(drag&&drag.type==='vtx'){        // бросили конец линии на блок — привяжем
+    const e=m.edges.find(x=>x.id===drag.edge);
+    if(e&&(drag.idx===0||drag.idx===e.points.length-1)){
+      const s=hitShape(m,e.points[drag.idx]);
+      if(s){
+        const A=anchors(s), p=e.points[drag.idx];
+        let best='top',bd=1e9;
+        for(const port of['top','bottom','left','right']){
+          const d=Math.hypot(A[port][0]-p[0],A[port][1]-p[1]);
+          if(d<bd){bd=d;best=port;}
+        }
+        e.points[drag.idx]=[r2(A[best][0]),r2(A[best][1])];
+        if(drag.idx===0)e.from={id:s.id,port:best}; else e.to={id:s.id,port:best};
+      }
+    }
+  }
+  guides=[]; drag=null; commit();
+}
+function onDbl(ev){
+  const el=ev.target.closest&&ev.target.closest('[data-shape],[data-label]');
+  if(!el)return;
+  const id=el.getAttribute('data-shape')||el.getAttribute('data-label');
+  clearSel();
+  (el.hasAttribute('data-shape')?sel.shapes:sel.labels).add(id);
+  inspect(); drawUI();
+  const f=$('#fText'); if(f){f.focus();f.select();}
+}
+/* быстрая перерисовка во время перетаскивания — без пересборки панелей */
+function redrawFast(){
+  const m=model();
+  const svg=$('#sheet svg'); if(!svg)return;
+  const out=renderSVG(m,{interactive:true,view,name:meta().name});
+  const tmp=document.createElement('div'); tmp.innerHTML=out.svg;
+  svg.innerHTML=tmp.firstElementChild.innerHTML;
+  drawUI();
+}
+
+/* ---------- операции ---------- */
+function delSel(){
+  const m=model(); if(!selCount())return; push();
+  m.shapes=m.shapes.filter(s=>!sel.shapes.has(s.id));
+  m.labels=m.labels.filter(l=>!sel.labels.has(l.id));
+  m.edges=m.edges.filter(e=>!sel.edges.has(e.id));
+  for(const e of m.edges){
+    if(e.from&&sel.shapes.has(e.from.id))e.from=null;
+    if(e.to&&sel.shapes.has(e.to.id))e.to=null;
+  }
+  clearSel(); commit();
+}
+function dupSel(){
+  const m=model(); if(!sel.shapes.size)return; push();
+  const added=[];
+  for(const id of sel.shapes){
+    const s=m.shapes.find(x=>x.id===id); if(!s)continue;
+    const c=clone(s); c.id=uid('s'); c.x=r2(s.x+20); c.y=r2(s.y+20);
+    m.shapes.push(c); added.push(c.id);
+  }
+  clearSel(); added.forEach(i=>sel.shapes.add(i)); commit();
+}
+function nudge(dx,dy){
+  const m=model(); if(!selCount())return; push();
+  for(const id of sel.shapes){const s=m.shapes.find(x=>x.id===id);
+    if(s){s.x=r2(s.x+dx);s.y=r2(s.y+dy);}}
+  for(const id of sel.labels){const l=m.labels.find(x=>x.id===id);
+    if(l){l.x=r2(l.x+dx);l.y=r2(l.y+dy);}}
+  for(const id of sel.edges){const e=m.edges.find(x=>x.id===id);
+    if(e)e.points=e.points.map(p=>[r2(p[0]+dx),r2(p[1]+dy)]);}
+  syncEdges(m,[...sel.shapes]); commit();
+}
+function fitShape(id){
+  const m=model(), s=m.shapes.find(x=>x.id===id); if(!s)return;
+  const g=sizeFor(s.kind,s.text,m.maxChars);
+  const cx=s.x+s.w/2;
+  s.x=r2(cx-g.w/2); s.w=g.w; s.h=g.h; syncEdges(m,[s.id]);
+}
+
+/* ---------- инспектор ---------- */
+function inspect(){
+  const box=$('#inspBody'), m=model();
+  if(sel.shapes.size===1&&!sel.edges.size){
+    const s=m.shapes.find(x=>x.id===[...sel.shapes][0]);
+    if(!s){box.innerHTML='';return;}
+    box.innerHTML=
+      `<label>Тип блока</label><select id="fKind">${KINDS.map(k=>
+        `<option value="${k}"${k===s.kind?' selected':''}>${KIND_LABEL[k]}</option>`).join('')}</select>`+
+      `<label>Текст</label><textarea id="fText" spellcheck="false">${esc(s.text)}</textarea>`+
+      `<label style="display:flex;gap:7px;align-items:center;margin-top:11px">
+        <input type="checkbox" id="fShift" style="width:auto" checked>
+        сдвигать блоки ниже</label>`+
+      `<div class="row"><button class="primary" id="fApply">Применить</button>`+
+      `<button id="fFit">По тексту</button></div>`+
+      `<div class="row"><button id="fDup">Дублировать</button>`+
+      `<button id="fDel">Удалить</button></div>`+
+      `<div class="row"><button id="fReroute">Перепроложить связи</button></div>`+
+      `<p class="note">Тянуть — перемещение, квадратики — размер.<br>
+        <span class="kbd">Alt</span> — без привязки к сетке,
+        <span class="kbd">Shift</span> — добавить к выделению.</p>`;
+    const apply=()=>{push();
+      const shift=$('#fShift').checked, bottom=s.y+s.h, h0=s.h;
+      s.kind=$('#fKind').value; s.text=$('#fText').value;
+      fitShape(s.id);
+      if(shift)shiftBelow(model(),bottom,r2(s.h-h0));
+      syncEdges(model(),[s.id]);
+      commit();const f=$('#fText');if(f)f.focus();};
+    $('#fApply').onclick=apply; $('#fKind').onchange=apply;
+    $('#fText').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();apply();}};
+    $('#fFit').onclick=()=>{push();fitShape(s.id);commit();};
+    $('#fReroute').onclick=()=>{push();let k=0;
+      for(const e of m.edges)
+        if((e.from&&e.from.id===s.id)||(e.to&&e.to.id===s.id))k+=rerouteEdge(m,e)?1:0;
+      commit();toast(k?('Проложено заново: '+k):'Связей нет');};
+    $('#fDup').onclick=dupSel; $('#fDel').onclick=delSel;
+    return;
+  }
+  if(sel.edges.size===1&&!sel.shapes.size){
+    const e=m.edges.find(x=>x.id===[...sel.edges][0]);
+    if(!e){box.innerHTML='';return;}
+    const nm=r=>r?(m.shapes.find(s=>s.id===r.id)||{}).text||'—':'свободный конец';
+    box.innerHTML=
+      `<p class="note">Из: <b>${esc(nm(e.from))}</b><br>В: <b>${esc(nm(e.to))}</b></p>`+
+      `<label>Стрелка на конце</label>
+       <select id="fArrow"><option value="1"${e.arrow!==false?' selected':''}>есть</option>
+       <option value="0"${e.arrow===false?' selected':''}>нет</option></select>`+
+      `<div class="row"><button id="fStraight">Выпрямить</button>
+       <button id="fRoute">Проложить заново</button></div>`+
+      `<div class="row"><button id="fDel">Удалить</button></div>`+
+      `<p class="note">Кружки — узлы линии, светлые — добавить узел.
+        Потяните крайний узел на блок, чтобы привязать линию.</p>`;
+    $('#fArrow').onchange=()=>{push();e.arrow=$('#fArrow').value==='1';commit();};
+    $('#fStraight').onclick=()=>{push();
+      const a=e.points[0],b=e.points[e.points.length-1];
+      e.points=Math.abs(a[0]-b[0])<2||Math.abs(a[1]-b[1])<2?[a,b]
+        :[a,[a[0],r2((a[1]+b[1])/2)],[b[0],r2((a[1]+b[1])/2)],b];
+      commit();};
+    $('#fRoute').onclick=()=>{push();
+      if(!rerouteEdge(m,e))toast('Линия не привязана к двум блокам');
+      commit();};
+    $('#fDel').onclick=delSel;
+    return;
+  }
+  if(sel.labels.size===1&&!sel.shapes.size&&!sel.edges.size){
+    const l=m.labels.find(x=>x.id===[...sel.labels][0]);
+    if(!l){box.innerHTML='';return;}
+    box.innerHTML=`<label>Текст подписи</label>
+      <input id="fText" value="${esc(l.text)}">
+      <label>Выравнивание</label>
+      <select id="fAn">${['start','middle','end'].map(a=>
+        `<option value="${a}"${a===l.anchor?' selected':''}>${
+          {start:'слева',middle:'по центру',end:'справа'}[a]}</option>`).join('')}</select>
+      <div class="row"><button class="primary" id="fApply">Применить</button>
+      <button id="fDel">Удалить</button></div>`;
+    const ap=()=>{push();l.text=$('#fText').value;l.anchor=$('#fAn').value;commit();};
+    $('#fApply').onclick=ap; $('#fAn').onchange=ap;
+    $('#fText').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ap();}};
+    $('#fDel').onclick=delSel;
+    return;
+  }
+  if(selCount()>1){
+    box.innerHTML=`<p class="note">Выделено объектов: <b>${selCount()}</b></p>
+      <div class="row"><button id="fDel">Удалить</button>
+      <button id="fDup">Дублировать</button></div>
+      <label>Выровнять по вертикали</label>
+      <div class="row"><button id="fAlign">По центру</button>
+      <button id="fSpread">Разложить</button></div>`;
+    $('#fDel').onclick=delSel; $('#fDup').onclick=dupSel;
+    $('#fAlign').onclick=()=>{const m2=model();const ss=m2.shapes.filter(s=>sel.shapes.has(s.id));
+      if(ss.length<2)return;push();
+      const cx=ss.reduce((a,s)=>a+s.x+s.w/2,0)/ss.length;
+      ss.forEach(s=>s.x=r2(cx-s.w/2)); syncEdges(m2,ss.map(s=>s.id)); commit();};
+    $('#fSpread').onclick=()=>{const m2=model();
+      const ss=m2.shapes.filter(s=>sel.shapes.has(s.id)).sort((a,b)=>a.y-b.y);
+      if(ss.length<3)return;push();
+      const top=ss[0].y, bot=ss[ss.length-1].y, step=(bot-top)/(ss.length-1);
+      ss.forEach((s,i)=>s.y=r2(top+step*i)); syncEdges(m2,ss.map(s=>s.id)); commit();};
+    return;
+  }
+  box.innerHTML=`<p class="note">Щёлкните по блоку, линии или подписи, чтобы
+    изменить их. Блок добавляется кнопками слева, связь — инструментом
+    <b>Связь</b>: щёлкните по блоку-источнику, затем по приёмнику.</p>`;
+}
+
+/* ---------- панель схем ---------- */
+function buildTree(filter){
+  const box=$('#tree'); box.innerHTML='';
+  const q=(filter||'').trim().toLowerCase();
+  let last=null;
+  for(const it of entries()){
+    if(q&&!(it.name.toLowerCase().includes(q)||it.rel.toLowerCase().includes(q)))continue;
+    if(it.rel!==last){last=it.rel;
+      const d=document.createElement('div');d.className='sec';d.textContent=it.rel;
+      box.appendChild(d);}
+    const a=document.createElement('a');
+    a.innerHTML=`<span>${esc(it.name)}</span><span class="ln">${
+      it.custom?'своя':':'+it.line}</span>`;
+    if(isEdited(it.anchor))a.classList.add('edited');
+    if(cur===it.anchor)a.classList.add('active');
+    a.onclick=()=>show(it.anchor);
+    box.appendChild(a);
+  }
+}
+function show(anchor){
+  cur=anchor; clearSel(); hist=[]; future=[]; view=null; pending=null;
+  const it=meta();
+  $('#figName').textContent=it.name;
+  $('#figMeta').textContent=it.signature+(it.line?('  ·  '+it.rel+':'+it.line):'');
+  const i=entries().findIndex(x=>x.anchor===anchor);
+  $('#caption').textContent='Рисунок '+(i+1)+' — Блок-схема алгоритма '+it.name;
+  document.title=it.name+' — '+DATA.title;
+  ensureView(model(),true);
+  draw(); buildTree($('#search').value); inspect();
+}
+function newDoc(){
+  const name=prompt('Название новой схемы:','Схема '+(custom.length+1));
+  if(!name)return;
+  const anchor='custom_'+uid('d');
+  custom.push({anchor,name});
+  docs[anchor]=hydrate(emptyDoc(name));
+  saveStore(); show(anchor); toast('Создана пустая схема — добавляйте блоки слева');
+}
+function delDoc(){
+  const it=meta(); if(!it)return;
+  if(it.custom){
+    if(!confirm('Удалить схему «'+it.name+'»?'))return;
+    custom=custom.filter(c=>c.anchor!==it.anchor); delete docs[it.anchor];
+    saveStore(); show(entries()[0].anchor); toast('Схема удалена');
+  }else{
+    if(!dirty.has(it.anchor)){toast('Правок нет');return;}
+    if(!confirm('Вернуть схему «'+it.name+'» к исходному виду?'))return;
+    delete docs[it.anchor]; dirty.delete(it.anchor);
+    saveStore(); show(it.anchor); toast('Правки сброшены');
+  }
+}
+
+/* ---------- инструменты ---------- */
+function setTool(t){
+  tool=t; pending=null;
+  document.querySelectorAll('[data-tool]').forEach(b=>
+    b.classList.toggle('on',b.getAttribute('data-tool')===t));
+  const svg=$('#sheet svg');
+  if(svg)svg.style.cursor=(t==='select')?'default':'crosshair';
+  drawUI();
+}
+
+/* ---------- экспорт ---------- */
+function exportSVG(){
+  const it=meta();
+  return renderSVG(model(),{title:it.name+(it.line?' — '+it.rel:''),name:it.name}).svg;
+}
+function download(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},400);
+}
+function svgToPng(svgText,scale){
+  return new Promise((res,rej)=>{
+    const blob=new Blob([svgText],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(blob),img=new Image();
+    img.onload=()=>{const c=document.createElement('canvas');
+      c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+      ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res(b):rej(new Error('canvas')),'image/png');};
+    img.onerror=e=>{URL.revokeObjectURL(url);rej(e);};
+    img.src=url;});
+}
+async function doPng(copy){
+  const scale=parseFloat($('#scale').value);
+  try{
+    const blob=await svgToPng(exportSVG(),scale);
+    if(copy){await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      toast('PNG скопирован — вставьте в отчёт (Ctrl+V)');}
+    else{download(blob,cur+'@'+scale+'x.png');toast('PNG сохранён');}
+  }catch(e){toast(copy?'Буфер недоступен — сохраните файлом':'Не удалось сделать PNG');}
+}
+function exportProject(){
+  download(new Blob([JSON.stringify({docs,custom},null,1)],
+    {type:'application/json'}),'blockwright-проект.json');
+  toast('Проект сохранён — его можно перенести на другой компьютер');
+}
+function importProject(file){
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+      const d=JSON.parse(rd.result);
+      docs=Object.assign(docs,d.docs||{});
+      const have=new Set(custom.map(c=>c.anchor));
+      for(const c of (d.custom||[]))if(!have.has(c.anchor))custom.push(c);
+      saveStore(); show(cur||entries()[0].anchor); toast('Проект загружен');
+    }catch(e){toast('Файл не похож на проект');}};
+  rd.readAsText(file);
+}
+
+/* ---------- запуск ---------- */
+window.addEventListener('DOMContentLoaded',()=>{
+  loadStore();
+  const hash=decodeURIComponent(location.hash.slice(1));
+  const list=entries();
+  show(list.find(i=>i.anchor===hash)?hash:list[0].anchor);
+  $('#search').oninput=e=>buildTree(e.target.value);
+  $('#btnNew').onclick=newDoc;
+  $('#btnDel').onclick=delDoc;
+  document.querySelectorAll('[data-tool]').forEach(b=>
+    b.onclick=()=>setTool(b.getAttribute('data-tool')));
+  $('#zoomIn').onclick=()=>{zoom=Math.min(3,zoom*1.25);draw();};
+  $('#zoomOut').onclick=()=>{zoom=Math.max(.2,zoom/1.25);draw();};
+  $('#zoom100').onclick=()=>{zoom=1;draw();};
+  $('#zoomFit').onclick=()=>{ensureView(model(),true);
+    const out=renderSVG(model(),{view});
+    zoom=Math.max(.2,Math.min(2,($('#stage').clientWidth-80)/out.w));draw();};
+  $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
+  $('#btnSvg').onclick=()=>{download(new Blob([exportSVG()],
+    {type:'image/svg+xml;charset=utf-8'}),cur+'.svg');
+    toast('SVG сохранён — открывается в Figma слоями');};
+  $('#btnPng').onclick=()=>doPng(false);
+  $('#btnCopy').onclick=()=>doPng(true);
+  $('#btnPrint').onclick=()=>window.print();
+  $('#btnSave').onclick=exportProject;
+  $('#btnLoad').onclick=()=>$('#fileIn').click();
+  $('#fileIn').onchange=e=>{if(e.target.files[0])importProject(e.target.files[0]);
+    e.target.value='';};
+  document.addEventListener('keydown',ev=>{
+    const tag=(ev.target.tagName||'').toLowerCase();
+    if(tag==='input'||tag==='textarea'||tag==='select')return;
+    const ctrl=ev.ctrlKey||ev.metaKey;
+    if(ctrl&&ev.key.toLowerCase()==='z'){ev.preventDefault();ev.shiftKey?redo():undo();return;}
+    if(ctrl&&ev.key.toLowerCase()==='y'){ev.preventDefault();redo();return;}
+    if(ctrl&&ev.key.toLowerCase()==='d'){ev.preventDefault();dupSel();return;}
+    if(ctrl&&ev.key.toLowerCase()==='a'){ev.preventDefault();const m=model();
+      m.shapes.forEach(s=>sel.shapes.add(s.id));m.edges.forEach(e=>sel.edges.add(e.id));
+      m.labels.forEach(l=>sel.labels.add(l.id));drawUI();inspect();return;}
+    if(ev.key==='Delete'||ev.key==='Backspace'){ev.preventDefault();delSel();return;}
+    if(ev.key==='Escape'){clearSel();setTool('select');drawUI();inspect();return;}
+    const step=ev.shiftKey?10:1;
+    if(ev.key==='ArrowLeft'){ev.preventDefault();nudge(-step,0);}
+    if(ev.key==='ArrowRight'){ev.preventDefault();nudge(step,0);}
+    if(ev.key==='ArrowUp'){ev.preventDefault();nudge(0,-step);}
+    if(ev.key==='ArrowDown'){ev.preventDefault();nudge(0,step);}
+    if(ev.key==='v')setTool('select');
+    if(ev.key==='c')setTool('connect');
+    if(ev.key==='t')setTool('label');
+    const idx='1234567'.indexOf(ev.key);
+    if(idx>=0)setTool('add:'+KINDS[idx]);
+  });
+  $('#stage').addEventListener('wheel',ev=>{
+    if(!ev.ctrlKey)return; ev.preventDefault();
+    zoom=Math.max(.2,Math.min(3,zoom*(ev.deltaY<0?1.1:1/1.1)));draw();
+  },{passive:false});
+});
+"""
+
+ICONS = {
+    "terminator": '<rect x="3" y="7" width="20" height="12" rx="6"/>',
+    "process": '<rect x="3" y="7" width="20" height="12"/>',
+    "io": '<polygon points="7,7 23,7 19,19 3,19"/>',
+    "decision": '<polygon points="13,5 23,13 13,21 3,13"/>',
+    "predefined": '<rect x="3" y="7" width="20" height="12"/>'
+                  '<line x1="7" y1="7" x2="7" y2="19"/><line x1="19" y1="7" x2="19" y2="19"/>',
+    "preparation": '<polygon points="7,7 19,7 23,13 19,19 7,19 3,13"/>',
+    "connector": '<circle cx="13" cy="13" r="7"/>',
+}
+TOOL_TITLES = {
+    "terminator": "Начало / конец  (1)", "process": "Процесс  (2)",
+    "io": "Ввод-вывод  (3)", "decision": "Решение  (4)",
+    "predefined": "Предопределённый процесс  (5)",
+    "preparation": "Подготовка / цикл  (6)", "connector": "Соединитель  (7)",
+}
+
+
+def _palette():
+    out = ['<button data-tool="select" class="on" title="Выбор и перемещение  (V)">'
+           '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1f2933" '
+           'stroke-width="1.6"><path d="M7 4 L7 20 L11 16 L14 22 L16 21 L13 15 L19 15 Z" '
+           'fill="#fff"/></svg></button>',
+           '<button data-tool="connect" title="Связь: щёлкните источник, затем приёмник  (C)">'
+           '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1f2933" '
+           'stroke-width="1.6"><path d="M5 6 H15 V19"/><path d="M12 16 L15 20 L18 16 Z" '
+           'fill="#1f2933"/></svg></button>',
+           '<button data-tool="label" title="Подпись  (T)">'
+           '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1f2933" '
+           'stroke-width="1.8"><path d="M6 8 H20 M13 8 V19"/></svg></button>',
+           '<div class="gap"></div>']
+    for kind in ("terminator", "process", "io", "decision", "predefined",
+                 "preparation", "connector"):
+        out.append(f'<button data-tool="add:{kind}" title="{TOOL_TITLES[kind]}">'
+                   f'<svg width="26" height="26" viewBox="0 0 26 26" fill="#fff" '
+                   f'stroke="#1f2933" stroke-width="1.6">{ICONS[kind]}</svg></button>')
+    return "".join(out)
+
+
+def render_html(entries, title="Блок-схемы", subtitle=""):
+    """entries: список dict(rel, name, signature, line, anchor, model)."""
+    payload = json.dumps({"title": title, "items": entries},
+                         ensure_ascii=False, separators=(",", ":"))
+    payload = payload.replace("</", "<\\/")
+    return f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{xml_escape(title)}</title>
+<style>{CSS}</style></head>
+<body>
+<div class="topbar">
+  <div class="brand">{xml_escape(title)}<span class="sub"> · {xml_escape(subtitle)}</span></div>
+  <div class="grow"></div>
+  <div class="group">
+    <button id="btnUndo" title="Отменить (Ctrl+Z)">↶</button>
+    <button id="btnRedo" title="Повторить (Ctrl+Shift+Z)">↷</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <select id="scale" title="Масштаб растра">
+      <option value="1">PNG ×1</option><option value="2" selected>PNG ×2</option>
+      <option value="3">PNG ×3</option><option value="4">PNG ×4</option>
+    </select>
+    <button id="btnCopy" class="primary" title="Скопировать картинку в буфер обмена">Копировать</button>
+    <button id="btnPng">PNG</button>
+    <button id="btnSvg" title="Вектор для Word и Figma">SVG</button>
+    <button id="btnPrint">Печать</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="btnSave" title="Выгрузить все правки и свои схемы в файл">Проект…</button>
+    <button id="btnLoad" title="Загрузить проект из файла">Открыть</button>
+    <input id="fileIn" type="file" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="nav">
+    <div class="navhead">
+      <input id="search" type="search" placeholder="Поиск схемы…">
+      <button id="btnNew" title="Создать пустую схему">＋</button>
+    </div>
+    <div class="tree" id="tree"></div>
+    <div style="padding:8px 10px;border-top:1px solid var(--line)">
+      <button id="btnDel" class="ghost" style="width:100%;color:var(--danger)"
+        title="Сбросить правки схемы или удалить свою схему">Сбросить / удалить</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <span class="name" id="figName"></span>
+      <span class="meta" id="figMeta"></span>
+      <div class="grow"></div>
+      <div class="group">
+        <button id="zoomOut" title="Уменьшить">−</button>
+        <span class="zoomval" id="zoomVal">100%</span>
+        <button id="zoomIn" title="Увеличить">+</button>
+        <button id="zoom100">1:1</button><button id="zoomFit">Вписать</button>
+      </div>
+    </div>
+    <div class="work">
+      <div class="palette">{_palette()}</div>
+      <div class="stage" id="stage">
+        <div class="sheet" id="sheet"></div>
+        <div class="caption" id="caption"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="insp">
+    <h3>Свойства</h3>
+    <div id="inspBody"></div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+<script>const DATA={payload};</script>
+<script>{JS_CORE}{JS_APP}</script>
+</body></html>
+"""
