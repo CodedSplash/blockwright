@@ -20,9 +20,17 @@ CSS = r"""
 *,*::before,*::after{box-sizing:border-box}
 :root{
   --bg:#eef1f5; --panel:#fff; --ink:#111820; --muted:#67757f; --line:#dbe2ea;
-  --accent:#2f6fd0; --accent-soft:#e8f0fd; --danger:#c0392b;
+  --accent:#2f6fd0; --accent-soft:#e8f0fd; --danger:#c0392b; --hover:#f2f5f9;
+  --field:#fbfcfe; --chart-bg:#ffffff;
   --shadow:0 1px 2px rgba(16,24,32,.06),0 6px 20px rgba(16,24,32,.07);
   --font:"Segoe UI","Noto Sans",Inter,Arial,sans-serif;
+}
+body[data-theme="dark"]{
+  --bg:#0d1117; --panel:#161b22; --ink:#e6edf3; --muted:#8b949e; --line:#26303b;
+  --accent:#4a90e2; --accent-soft:#1a2b42; --danger:#f2726f; --hover:#1c242e;
+  --field:#0f151d; --chart-bg:#11161d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  color-scheme:dark;
 }
 html,body{height:100%}
 body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);
@@ -30,7 +38,7 @@ body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);
 button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:var(--panel);border:1px solid var(--line);
        border-radius:8px;padding:6px 11px}
-button:hover{background:#f4f7fb;border-color:#c3ceda}
+button:hover{background:var(--hover);border-color:var(--muted)}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button.primary:hover{background:#265fb8}
 button.on{background:var(--accent-soft);border-color:#b7d0f2;color:#1d4f9e}
@@ -49,14 +57,14 @@ aside.insp{flex:0 0 280px;border-left:1px solid var(--line);padding:12px 14px;
            overflow:auto}
 .navhead{display:flex;gap:6px;padding:10px 10px 6px}
 .navhead input{flex:1 1 auto;min-width:0;padding:6px 9px;border:1px solid var(--line);
-               border-radius:8px;background:#fbfcfe}
+               border-radius:8px;background:var(--field);color:var(--ink)}
 .tree{overflow:auto;padding:0 8px 14px;min-height:0;flex:1 1 auto}
 .tree .sec{font-size:11px;letter-spacing:.07em;text-transform:uppercase;
            color:var(--muted);padding:12px 8px 5px;font-weight:600}
 .tree a{display:flex;gap:6px;align-items:baseline;padding:6px 9px;border-radius:7px;
         color:var(--ink);text-decoration:none;overflow-wrap:anywhere;line-height:1.35;
         cursor:pointer}
-.tree a:hover{background:#f2f5f9}
+.tree a:hover{background:var(--hover)}
 .tree a.active{background:var(--accent-soft);color:#1d4f9e;font-weight:600}
 .tree a .ln{color:var(--muted);font-size:11.5px;font-weight:400;margin-left:auto}
 .tree a.edited .ln::after{content:" •";color:var(--accent)}
@@ -76,7 +84,7 @@ main{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-height:0}
 .palette .gap{height:8px}
 .palette svg{pointer-events:none}
 .stage{flex:1 1 auto;overflow:auto;padding:22px;min-height:0}
-.sheet{background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:16px;
+.sheet{background:var(--chart-bg);border-radius:10px;box-shadow:var(--shadow);padding:16px;
        margin:0 auto;width:max-content;max-width:none}
 .sheet svg{display:block;touch-action:none}
 .caption{text-align:center;color:var(--muted);padding:10px 0 24px;font-size:13px}
@@ -95,18 +103,29 @@ svg .marquee{fill:rgba(47,111,208,.10);stroke:var(--accent);stroke-width:1;
          color:var(--muted)}
 .insp label{display:block;font-size:12.5px;color:var(--muted);margin:12px 0 5px}
 .insp select,.insp textarea,.insp input{width:100%;padding:7px 9px;
-  border:1px solid var(--line);border-radius:8px;background:#fbfcfe}
+  border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink)}
 .insp textarea{min-height:88px;resize:vertical;font-family:Consolas,monospace;
                font-size:13px;line-height:1.45}
 .insp .row{display:flex;gap:6px;margin-top:10px}
 .insp .row>*{flex:1 1 auto}
 .insp .note{color:var(--muted);font-size:12.2px;line-height:1.55;margin-top:14px}
-.insp .kbd{font-family:Consolas,monospace;background:#f1f4f8;border:1px solid var(--line);
+.insp .kbd{font-family:Consolas,monospace;background:var(--hover);border:1px solid var(--line);
            border-radius:4px;padding:0 4px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,14px);
        background:#111820;color:#fff;padding:9px 16px;border-radius:9px;font-size:13px;
        opacity:0;pointer-events:none;transition:.2s;z-index:60}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+/* новые мелочи интерфейса */
+.check{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--muted);
+       font-size:12.5px;padding:0 4px;cursor:pointer}
+.check input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+button.tiny{padding:3px 7px;font-size:13px;color:var(--muted)}
+button.danger{color:var(--danger)}
+.navfoot{padding:8px 10px;border-top:1px solid var(--line)}
+.navfoot button{width:100%}
+.toolbar .name{cursor:text}
+.only-narrow{display:none}
+
 @media print{
   body{overflow:visible;background:#fff}
   .topbar,aside,.toolbar,.palette{display:none!important}
@@ -114,6 +133,35 @@ svg .marquee{fill:rgba(47,111,208,.10);stroke:var(--accent);stroke-width:1;
   .stage{overflow:visible;padding:0}
   .sheet{box-shadow:none;border-radius:0;padding:0;width:auto}
   svg .handle,svg .sel-outline,svg .guide,svg .marquee{display:none}
+}
+
+/* --- адаптив --- */
+@media (max-width:1360px){ button.wide{display:none} }
+@media (max-width:1180px){
+  aside.nav{flex-basis:210px} aside.insp{flex-basis:250px}
+  .toolbar .meta{display:none}
+}
+@media (max-width:980px){
+  body.edit aside.insp,aside.insp{position:fixed;right:0;top:52px;bottom:0;width:270px;
+    z-index:30;box-shadow:var(--shadow)}
+  aside.insp{display:block}
+  .brand .sub{display:none}
+}
+@media (max-width:820px){
+  .only-narrow{display:inline-block}
+  aside.nav{position:fixed;left:0;top:52px;bottom:0;width:250px;z-index:40;
+    transform:translateX(-102%);transition:transform .18s;box-shadow:var(--shadow)}
+  body.nav-open aside.nav{transform:none}
+  aside.insp{display:none}
+  .palette{flex-basis:46px}
+  .palette button{width:36px;height:36px}
+  .stage{padding:12px}
+}
+@media (max-width:560px){
+  .topbar{height:auto;flex-wrap:wrap;padding:6px 8px;gap:5px}
+  .layout{height:auto;min-height:calc(100vh - 92px)}
+  .sep,.zoomval{display:none}
+  .brand{font-size:13px;max-width:52%}
 }
 """
 
@@ -124,17 +172,132 @@ const MARGIN=26, TITLE_H=34, ARROW_LEN=9, ARROW_HALF=3.6, GRID=5, PAD=60;
 const STUB=20, CORNER=6;
 const MONO="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', 'Courier New', monospace";
 const UI="Segoe UI, 'Noto Sans', Arial, sans-serif";
-const STROKE="#1f2933", INK="#10151b";
-const FILL={process:"#ffffff",io:"#eef4ff",decision:"#fff6e5",terminator:"#e9f3ec",
-            predefined:"#f3eefc",preparation:"#e8f5f1",connector:"#ffffff"};
+/* палитры схемы: те же, что в blockwright/render.py */
+const THEMES={
+  light:{stroke:"#1f2933",ink:"#10151b",bg:"#ffffff",
+         fill:{process:"#ffffff",io:"#eef4ff",decision:"#fff6e5",terminator:"#e9f3ec",
+               predefined:"#f3eefc",preparation:"#e8f5f1",connector:"#ffffff"}},
+  dark:{stroke:"#9aa4b2",ink:"#e9eef5",bg:"#11161d",
+        fill:{process:"#1a212b",io:"#152436",decision:"#2c2517",terminator:"#152a20",
+              predefined:"#231d33",preparation:"#14271f",connector:"#1a212b"}}};
+let THEME='light';
+const TH=()=>THEMES[THEME]||THEMES.light;
 const KIND_RU={process:"Процесс",io:"ВводВывод",decision:"Решение",
                terminator:"Терминатор",predefined:"Подпрограмма",
                preparation:"Цикл",connector:"Соединитель"};
-const KIND_LABEL={terminator:"Начало / конец",process:"Процесс",io:"Ввод-вывод",
-                  decision:"Решение",predefined:"Предопределённый процесс",
-                  preparation:"Подготовка (цикл)",connector:"Соединитель"};
 const KINDS=["terminator","process","io","decision","predefined","preparation","connector"];
 const STORE='blockwright.v1';
+
+/* ---------- переводы интерфейса ---------- */
+const I18N={
+ ru:{
+  app_title:"Блок-схемы: {0}", charts_count:"схем: {0}", my_charts:"Мои схемы",
+  caption:"Рисунок {0} — Блок-схема алгоритма {1}", made_by_hand:"создано вручную",
+  own:"своя", search:"Поиск схемы…", props:"Свойства",
+  b_undo:"Отменить (Ctrl+Z)", b_redo:"Повторить (Ctrl+Shift+Z)",
+  b_copy:"Копировать", b_copy_t:"Скопировать картинку в буфер обмена",
+  b_png:"PNG", b_svg:"SVG", b_svg_t:"Вектор для Word и Figma", b_print:"Печать",
+  b_project:"Проект…", b_project_t:"Выгрузить правки и свои схемы в файл",
+  b_open:"Открыть", b_open_t:"Загрузить проект из файла",
+  b_new_t:"Создать пустую схему", b_del:"Сбросить / удалить",
+  b_del_t:"Сбросить правки схемы или удалить свою схему",
+  b_rename_t:"Переименовать схему", b_theme_t:"Светлая / тёмная тема",
+  b_lang_t:"Язык интерфейса", b_menu_t:"Список схем",
+  z_out:"Уменьшить", z_in:"Увеличить", z_fit:"Вписать",
+  cap_title:"заголовок", cap_title_t:"Добавлять заголовок в экспортируемый файл",
+  kind_terminator:"Начало / конец", kind_process:"Процесс", kind_io:"Ввод-вывод",
+  kind_decision:"Решение", kind_predefined:"Предопределённый процесс",
+  kind_preparation:"Подготовка (цикл)", kind_connector:"Соединитель",
+  t_select:"Выбор и перемещение  (V)", t_connect:"Связь: щёлкните источник, затем приёмник  (C)",
+  t_label:"Подпись  (T)",
+  t_terminator:"Начало / конец  (1)", t_process:"Процесс  (2)", t_io:"Ввод-вывод  (3)",
+  t_decision:"Решение  (4)", t_predefined:"Предопределённый процесс  (5)",
+  t_preparation:"Подготовка / цикл  (6)", t_connector:"Соединитель  (7)",
+  i_type:"Тип блока", i_text:"Текст", i_apply:"Применить", i_fit:"По тексту",
+  i_dup:"Дублировать", i_del:"Удалить", i_shift:"сдвигать блоки ниже",
+  i_reroute:"Перепроложить связи",
+  i_hint_block:"Тянуть — перемещение, квадратики — размер.<br><span class=\"kbd\">Alt</span> — без привязки к сетке, <span class=\"kbd\">Shift</span> — добавить к выделению.",
+  i_from:"Из", i_to:"В", i_free:"свободный конец",
+  i_arrow:"Стрелка на конце", i_arrow_on:"есть", i_arrow_off:"нет",
+  i_straight:"Выпрямить", i_route:"Проложить заново",
+  i_hint_edge:"Кружки — узлы линии, светлые — добавить узел. Потяните крайний узел на блок, чтобы привязать линию.",
+  i_label_text:"Текст подписи", i_align:"Выравнивание",
+  i_left:"слева", i_center:"по центру", i_right:"справа",
+  i_selected:"Выделено объектов: <b>{0}</b>", i_align_v:"Выровнять по вертикали",
+  i_align_c:"По центру", i_spread:"Разложить",
+  i_empty:"Щёлкните по блоку, линии или подписи, чтобы изменить их. Блок добавляется кнопками слева, связь — инструментом <b>Связь</b>: щёлкните по блоку-источнику, затем по приёмнику.",
+  m_new_name:"Название новой схемы:", m_new_default:"Схема {0}",
+  m_rename:"Название схемы:",
+  m_del_chart:"Удалить схему «{0}»?", m_reset_chart:"Вернуть схему «{0}» к исходному виду?",
+  s_new:"Создана пустая схема — добавляйте блоки слева", s_deleted:"Схема удалена",
+  s_reset:"Правки сброшены", s_no_edits:"Правок нет",
+  s_svg:"SVG сохранён — открывается в Figma слоями", s_png:"PNG сохранён",
+  s_copied:"PNG скопирован — вставьте в отчёт (Ctrl+V)",
+  s_clip_fail:"Буфер недоступен — сохраните файлом", s_png_fail:"Не удалось сделать PNG",
+  s_proj_saved:"Проект сохранён — его можно перенести на другой компьютер",
+  s_proj_loaded:"Проект загружен", s_proj_bad:"Файл не похож на проект",
+  s_storage:"Не удалось сохранить — хранилище браузера переполнено",
+  s_rerouted:"Проложено заново: {0}", s_no_links:"Связей нет",
+  s_unbound:"Линия не привязана к двум блокам", s_renamed:"Схема переименована"
+ },
+ en:{
+  app_title:"Flowcharts: {0}", charts_count:"{0} charts", my_charts:"My charts",
+  caption:"Figure {0} — Flowchart of {1}", made_by_hand:"drawn by hand",
+  own:"own", search:"Search chart…", props:"Properties",
+  b_undo:"Undo (Ctrl+Z)", b_redo:"Redo (Ctrl+Shift+Z)",
+  b_copy:"Copy", b_copy_t:"Copy the image to the clipboard",
+  b_png:"PNG", b_svg:"SVG", b_svg_t:"Vector for Word and Figma", b_print:"Print",
+  b_project:"Project…", b_project_t:"Export edits and own charts to a file",
+  b_open:"Open", b_open_t:"Load a project file",
+  b_new_t:"Create an empty chart", b_del:"Reset / delete",
+  b_del_t:"Reset chart edits or delete your own chart",
+  b_rename_t:"Rename the chart", b_theme_t:"Light / dark theme",
+  b_lang_t:"Interface language", b_menu_t:"Chart list",
+  z_out:"Zoom out", z_in:"Zoom in", z_fit:"Fit",
+  cap_title:"title", cap_title_t:"Include the title in the exported file",
+  kind_terminator:"Terminator", kind_process:"Process", kind_io:"Input / output",
+  kind_decision:"Decision", kind_predefined:"Predefined process",
+  kind_preparation:"Preparation (loop)", kind_connector:"Connector",
+  t_select:"Select and move  (V)", t_connect:"Connector: click source, then target  (C)",
+  t_label:"Label  (T)",
+  t_terminator:"Terminator  (1)", t_process:"Process  (2)", t_io:"Input / output  (3)",
+  t_decision:"Decision  (4)", t_predefined:"Predefined process  (5)",
+  t_preparation:"Preparation / loop  (6)", t_connector:"Connector  (7)",
+  i_type:"Block type", i_text:"Text", i_apply:"Apply", i_fit:"Fit to text",
+  i_dup:"Duplicate", i_del:"Delete", i_shift:"push blocks below",
+  i_reroute:"Reroute connectors",
+  i_hint_block:"Drag to move, squares resize.<br><span class=\"kbd\">Alt</span> — ignore the grid, <span class=\"kbd\">Shift</span> — extend the selection.",
+  i_from:"From", i_to:"To", i_free:"free end",
+  i_arrow:"Arrowhead", i_arrow_on:"yes", i_arrow_off:"no",
+  i_straight:"Straighten", i_route:"Reroute",
+  i_hint_edge:"Circles are nodes, light ones add a node. Drag an end node onto a block to attach the connector.",
+  i_label_text:"Label text", i_align:"Alignment",
+  i_left:"left", i_center:"center", i_right:"right",
+  i_selected:"Selected: <b>{0}</b>", i_align_v:"Align vertically",
+  i_align_c:"Center", i_spread:"Distribute",
+  i_empty:"Click a block, connector or label to edit it. Add blocks with the buttons on the left; for a connector pick the <b>Connector</b> tool, then click the source and the target.",
+  m_new_name:"Name of the new chart:", m_new_default:"Chart {0}",
+  m_rename:"Chart name:",
+  m_del_chart:"Delete chart “{0}”?", m_reset_chart:"Reset chart “{0}” to its original state?",
+  s_new:"Empty chart created — add blocks from the palette", s_deleted:"Chart deleted",
+  s_reset:"Edits discarded", s_no_edits:"Nothing was edited",
+  s_svg:"SVG saved — opens in Figma as layers", s_png:"PNG saved",
+  s_copied:"PNG copied — paste it into your report (Ctrl+V)",
+  s_clip_fail:"Clipboard unavailable — save the file instead", s_png_fail:"Could not render PNG",
+  s_proj_saved:"Project saved — you can move it to another computer",
+  s_proj_loaded:"Project loaded", s_proj_bad:"This file is not a project",
+  s_storage:"Could not save — browser storage is full",
+  s_rerouted:"Rerouted: {0}", s_no_links:"No connectors",
+  s_unbound:"The connector is not attached to two blocks", s_renamed:"Chart renamed"
+ }};
+let LANG='ru';
+function t(key){
+  const dict=I18N[LANG]||I18N.ru;
+  let s=dict[key]!==undefined?dict[key]:(I18N.ru[key]!==undefined?I18N.ru[key]:key);
+  for(let i=1;i<arguments.length;i++)s=s.split('{'+(i-1)+'}').join(arguments[i]);
+  return s;
+}
+const KIND_LABEL=k=>t('kind_'+k);
 
 /* ---------- текст и размеры ---------- */
 function norm(s){return String(s==null?'':s).replace(/[\r\n\t]/g,' ')
@@ -200,7 +363,7 @@ function bbox(m){
 }
 function outline(s){
   const x=s.x,y=s.y,w=s.w,h=s.h,k=s.kind;
-  const st=`fill="${FILL[k]||'#fff'}" stroke="${STROKE}" stroke-width="1.6"`;
+  const st=`fill="${TH().fill[k]||TH().bg}" stroke="${TH().stroke}" stroke-width="1.6"`;
   if(k==='terminator')return[`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" rx="${n(h/2)}" ry="${n(h/2)}" ${st}/>`];
   if(k==='decision')return[`<polygon points="${n(x+w/2)},${n(y)} ${n(x+w)},${n(y+h/2)} ${n(x+w/2)},${n(y+h)} ${n(x)},${n(y+h/2)}" ${st}/>`];
   if(k==='io'){const s2=Math.min(h*.34,w*.3);
@@ -208,7 +371,7 @@ function outline(s){
   if(k==='preparation'){const c=Math.min(h*.5,w*.25);
     return[`<polygon points="${n(x+c)},${n(y)} ${n(x+w-c)},${n(y)} ${n(x+w)},${n(y+h/2)} ${n(x+w-c)},${n(y+h)} ${n(x+c)},${n(y+h)} ${n(x)},${n(y+h/2)}" ${st}/>`];}
   if(k==='predefined'){const o=[`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" ${st}/>`];
-    for(const dx of[11,w-11])o.push(`<line x1="${n(x+dx)}" y1="${n(y)}" x2="${n(x+dx)}" y2="${n(y+h)}" stroke="${STROKE}" stroke-width="1.4"/>`);
+    for(const dx of[11,w-11])o.push(`<line x1="${n(x+dx)}" y1="${n(y)}" x2="${n(x+dx)}" y2="${n(y+h)}" stroke="${TH().stroke}" stroke-width="1.4"/>`);
     return o;}
   if(k==='connector')return[`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}" ${st}/>`];
   return[`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" rx="2" ry="2" ${st}/>`];
@@ -216,7 +379,7 @@ function outline(s){
 function shapeText(s,maxChars){
   const lines=wrap(s.text,maxChars);
   const cx=s.x+s.w/2, cy=s.y+s.h/2, y0=cy-(lines.length-1)*LH/2+FS*.36;
-  return lines.map((ln,i)=>`<text x="${n(cx)}" y="${n(y0+i*LH)}" text-anchor="middle" font-family="${MONO}" font-size="${FS}" fill="${INK}">${esc(ln)}</text>`);
+  return lines.map((ln,i)=>`<text x="${n(cx)}" y="${n(y0+i*LH)}" text-anchor="middle" font-family="${MONO}" font-size="${FS}" fill="${TH().ink}">${esc(ln)}</text>`);
 }
 function cleanPts(pts){
   const cl=[pts[0]];
@@ -252,13 +415,13 @@ function edgeSvg(e){
     const ux=dx/L,uy=dy/L,bx=b[0]-ux*ARROW_LEN,by=b[1]-uy*ARROW_LEN;
     const px=-uy*ARROW_HALF,py=ux*ARROW_HALF;
     if(L>ARROW_LEN)pts=pts.slice(0,-1).concat([[bx,by]]);
-    out.push(`<path d="M${n(b[0])},${n(b[1])} L${n(bx+px)},${n(by+py)} L${n(bx-px)},${n(by-py)} Z" fill="${STROKE}"/>`);
+    out.push(`<path d="M${n(b[0])},${n(b[1])} L${n(bx+px)},${n(by+py)} L${n(bx-px)},${n(by-py)} Z" fill="${TH().stroke}"/>`);
   }
-  out.unshift(`<path d="${roundPath(pts,CORNER)}" fill="none" stroke="${STROKE}" stroke-width="1.5" stroke-linecap="round"/>`);
+  out.unshift(`<path d="${roundPath(pts,CORNER)}" fill="none" stroke="${TH().stroke}" stroke-width="1.5" stroke-linecap="round"/>`);
   return out;
 }
 function labelSvg(l){
-  return `<text x="${n(l.x)}" y="${n(l.y)}" text-anchor="${l.anchor}" font-family="${UI}" font-size="${LBL}" fill="${INK}">${esc(l.text)}</text>`;
+  return `<text x="${n(l.x)}" y="${n(l.y)}" text-anchor="${l.anchor}" font-family="${UI}" font-size="${LBL}" fill="${TH().ink}">${esc(l.text)}</text>`;
 }
 /* view=null -> поля по содержимому (экспорт); иначе фиксированная область (холст) */
 function renderSVG(m,opt){
@@ -267,8 +430,8 @@ function renderSVG(m,opt){
   const top=MARGIN+(title?TITLE_H:0);
   const W=(b.x1-b.x0)+2*MARGIN, H=(b.y1-b.y0)+MARGIN+top;
   const dx=MARGIN-b.x0, dy=top-b.y0;
-  const parts=[`<rect id="Фон" x="0" y="0" width="${n(W)}" height="${n(H)}" fill="#ffffff"/>`];
-  if(title)parts.push(`<text id="Заголовок" x="${n(W/2)}" y="${n(MARGIN+6)}" text-anchor="middle" font-family="${UI}" font-size="15" font-weight="600" fill="${INK}">${esc(title)}</text>`);
+  const parts=[`<rect id="Фон" x="0" y="0" width="${n(W)}" height="${n(H)}" fill="${TH().bg}"/>`];
+  if(title)parts.push(`<text id="Заголовок" x="${n(W/2)}" y="${n(MARGIN+6)}" text-anchor="middle" font-family="${UI}" font-size="15" font-weight="600" fill="${TH().ink}">${esc(title)}</text>`);
   const lines=[],hits=[];
   for(const e of m.edges){
     lines.push(...edgeSvg(e));
@@ -465,27 +628,39 @@ function emptyDoc(name){
 JS_APP = r"""
 /* ---------- состояние ---------- */
 const $=s=>document.querySelector(s);
-let docs={}, custom=[], dirty=new Set(), cur=null, view=null, zoom=1;
+let docs={}, custom=[], dirty=new Set(), names={}, cur=null, view=null, zoom=1;
+let exportTitle=true;
 let sel={shapes:new Set(),edges:new Set(),labels:new Set()};
 let tool='select', hist=[], future=[], drag=null, pending=null, guides=[];
 
 function loadStore(){
   try{const raw=JSON.parse(localStorage.getItem(STORE)||'{}');
-    docs=raw.docs||{}; custom=raw.custom||[]; dirty=new Set(raw.dirty||[]);}
-  catch(e){docs={};custom=[];dirty=new Set();}
+    docs=raw.docs||{}; custom=raw.custom||[]; dirty=new Set(raw.dirty||[]);
+    names=raw.names||{};
+    LANG=raw.lang||DATA.lang||LANG;          // выбор пользователя важнее умолчаний,
+    THEME=raw.theme||DATA.theme||THEME;      // а умолчания приходят из командной строки
+    if(raw.exportTitle!==undefined)exportTitle=!!raw.exportTitle;}
+  catch(e){docs={};custom=[];dirty=new Set();names={};
+           LANG=DATA.lang||LANG;THEME=DATA.theme||THEME;}
+  if(!I18N[LANG])LANG='ru';
+  if(!THEMES[THEME])THEME='light';
 }
 function saveStore(){
   /* храним только то, что правили вручную, и свои схемы */
   const keep={}, mine=new Set(custom.map(c=>c.anchor));
   for(const k of Object.keys(docs))if(dirty.has(k)||mine.has(k))keep[k]=docs[k];
-  try{localStorage.setItem(STORE,JSON.stringify({docs:keep,custom,dirty:[...dirty]}));}
-  catch(e){toast('Не удалось сохранить — хранилище браузера переполнено');}
+  try{localStorage.setItem(STORE,JSON.stringify(
+    {docs:keep,custom,dirty:[...dirty],names,lang:LANG,theme:THEME,exportTitle}));}
+  catch(e){toast(t('s_storage'));}
 }
 function entries(){
-  return DATA.items.concat(custom.map(c=>({anchor:c.anchor,name:c.name,rel:'Мои схемы',
-    signature:'создано вручную',line:0,custom:true})));
+  return DATA.items.concat(custom.map(c=>({anchor:c.anchor,name:c.name,rel:t('my_charts'),
+    signature:t('made_by_hand'),line:0,custom:true})));
 }
-function meta(){return entries().find(i=>i.anchor===cur);}
+function meta(){return entries().find(i=>i.anchor===cur)||{name:'',rel:'',signature:'',line:0};}
+function nameOf(it){return (it&&names[it.anchor])||(it&&it.name)||'';}
+function fileBase(){
+  return (nameOf(meta())||cur||'chart').replace(/[^0-9A-Za-zА-Яа-яЁё_.-]+/g,'_');}
 function model(){
   if(!docs[cur]){
     const it=meta();
@@ -520,7 +695,7 @@ function ensureView(m,reset){
 }
 function draw(){
   const m=model(); ensureView(m,false);
-  const out=renderSVG(m,{interactive:true,view,name:meta().name});
+  const out=renderSVG(m,{interactive:true,view,name:nameOf(meta())});
   $('#sheet').innerHTML=out.svg;
   const svg=$('#sheet svg');
   svg.style.width=(out.w*zoom)+'px'; svg.style.height=(out.h*zoom)+'px';
@@ -735,7 +910,7 @@ function onDbl(ev){
 function redrawFast(){
   const m=model();
   const svg=$('#sheet svg'); if(!svg)return;
-  const out=renderSVG(m,{interactive:true,view,name:meta().name});
+  const out=renderSVG(m,{interactive:true,view,name:nameOf(meta())});
   const tmp=document.createElement('div'); tmp.innerHTML=out.svg;
   svg.innerHTML=tmp.firstElementChild.innerHTML;
   drawUI();
@@ -787,20 +962,18 @@ function inspect(){
     const s=m.shapes.find(x=>x.id===[...sel.shapes][0]);
     if(!s){box.innerHTML='';return;}
     box.innerHTML=
-      `<label>Тип блока</label><select id="fKind">${KINDS.map(k=>
-        `<option value="${k}"${k===s.kind?' selected':''}>${KIND_LABEL[k]}</option>`).join('')}</select>`+
-      `<label>Текст</label><textarea id="fText" spellcheck="false">${esc(s.text)}</textarea>`+
+      `<label>${t('i_type')}</label><select id="fKind">${KINDS.map(k=>
+        `<option value="${k}"${k===s.kind?' selected':''}>${KIND_LABEL(k)}</option>`).join('')}</select>`+
+      `<label>${t('i_text')}</label><textarea id="fText" spellcheck="false">${esc(s.text)}</textarea>`+
       `<label style="display:flex;gap:7px;align-items:center;margin-top:11px">
         <input type="checkbox" id="fShift" style="width:auto" checked>
-        сдвигать блоки ниже</label>`+
-      `<div class="row"><button class="primary" id="fApply">Применить</button>`+
-      `<button id="fFit">По тексту</button></div>`+
-      `<div class="row"><button id="fDup">Дублировать</button>`+
-      `<button id="fDel">Удалить</button></div>`+
-      `<div class="row"><button id="fReroute">Перепроложить связи</button></div>`+
-      `<p class="note">Тянуть — перемещение, квадратики — размер.<br>
-        <span class="kbd">Alt</span> — без привязки к сетке,
-        <span class="kbd">Shift</span> — добавить к выделению.</p>`;
+        ${t('i_shift')}</label>`+
+      `<div class="row"><button class="primary" id="fApply">${t('i_apply')}</button>`+
+      `<button id="fFit">${t('i_fit')}</button></div>`+
+      `<div class="row"><button id="fDup">${t('i_dup')}</button>`+
+      `<button id="fDel">${t('i_del')}</button></div>`+
+      `<div class="row"><button id="fReroute">${t('i_reroute')}</button></div>`+
+      `<p class="note">${t('i_hint_block')}</p>`;
     const apply=()=>{push();
       const shift=$('#fShift').checked, bottom=s.y+s.h, h0=s.h;
       s.kind=$('#fKind').value; s.text=$('#fText').value;
@@ -814,24 +987,23 @@ function inspect(){
     $('#fReroute').onclick=()=>{push();let k=0;
       for(const e of m.edges)
         if((e.from&&e.from.id===s.id)||(e.to&&e.to.id===s.id))k+=rerouteEdge(m,e)?1:0;
-      commit();toast(k?('Проложено заново: '+k):'Связей нет');};
+      commit();toast(k?t('s_rerouted',k):t('s_no_links'));};
     $('#fDup').onclick=dupSel; $('#fDel').onclick=delSel;
     return;
   }
   if(sel.edges.size===1&&!sel.shapes.size){
     const e=m.edges.find(x=>x.id===[...sel.edges][0]);
     if(!e){box.innerHTML='';return;}
-    const nm=r=>r?(m.shapes.find(s=>s.id===r.id)||{}).text||'—':'свободный конец';
+    const nm=r=>r?(m.shapes.find(s=>s.id===r.id)||{}).text||'—':t('i_free');
     box.innerHTML=
-      `<p class="note">Из: <b>${esc(nm(e.from))}</b><br>В: <b>${esc(nm(e.to))}</b></p>`+
-      `<label>Стрелка на конце</label>
-       <select id="fArrow"><option value="1"${e.arrow!==false?' selected':''}>есть</option>
-       <option value="0"${e.arrow===false?' selected':''}>нет</option></select>`+
-      `<div class="row"><button id="fStraight">Выпрямить</button>
-       <button id="fRoute">Проложить заново</button></div>`+
-      `<div class="row"><button id="fDel">Удалить</button></div>`+
-      `<p class="note">Кружки — узлы линии, светлые — добавить узел.
-        Потяните крайний узел на блок, чтобы привязать линию.</p>`;
+      `<p class="note">${t('i_from')}: <b>${esc(nm(e.from))}</b><br>${t('i_to')}: <b>${esc(nm(e.to))}</b></p>`+
+      `<label>${t('i_arrow')}</label>
+       <select id="fArrow"><option value="1"${e.arrow!==false?' selected':''}>${t('i_arrow_on')}</option>
+       <option value="0"${e.arrow===false?' selected':''}>${t('i_arrow_off')}</option></select>`+
+      `<div class="row"><button id="fStraight">${t('i_straight')}</button>
+       <button id="fRoute">${t('i_route')}</button></div>`+
+      `<div class="row"><button id="fDel">${t('i_del')}</button></div>`+
+      `<p class="note">${t('i_hint_edge')}</p>`;
     $('#fArrow').onchange=()=>{push();e.arrow=$('#fArrow').value==='1';commit();};
     $('#fStraight').onclick=()=>{push();
       const a=e.points[0],b=e.points[e.points.length-1];
@@ -839,7 +1011,7 @@ function inspect(){
         :[a,[a[0],r2((a[1]+b[1])/2)],[b[0],r2((a[1]+b[1])/2)],b];
       commit();};
     $('#fRoute').onclick=()=>{push();
-      if(!rerouteEdge(m,e))toast('Линия не привязана к двум блокам');
+      if(!rerouteEdge(m,e))toast(t('s_unbound'));
       commit();};
     $('#fDel').onclick=delSel;
     return;
@@ -847,14 +1019,14 @@ function inspect(){
   if(sel.labels.size===1&&!sel.shapes.size&&!sel.edges.size){
     const l=m.labels.find(x=>x.id===[...sel.labels][0]);
     if(!l){box.innerHTML='';return;}
-    box.innerHTML=`<label>Текст подписи</label>
+    box.innerHTML=`<label>${t('i_label_text')}</label>
       <input id="fText" value="${esc(l.text)}">
-      <label>Выравнивание</label>
+      <label>${t('i_align')}</label>
       <select id="fAn">${['start','middle','end'].map(a=>
         `<option value="${a}"${a===l.anchor?' selected':''}>${
-          {start:'слева',middle:'по центру',end:'справа'}[a]}</option>`).join('')}</select>
-      <div class="row"><button class="primary" id="fApply">Применить</button>
-      <button id="fDel">Удалить</button></div>`;
+          {start:t('i_left'),middle:t('i_center'),end:t('i_right')}[a]}</option>`).join('')}</select>
+      <div class="row"><button class="primary" id="fApply">${t('i_apply')}</button>
+      <button id="fDel">${t('i_del')}</button></div>`;
     const ap=()=>{push();l.text=$('#fText').value;l.anchor=$('#fAn').value;commit();};
     $('#fApply').onclick=ap; $('#fAn').onchange=ap;
     $('#fText').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ap();}};
@@ -862,12 +1034,12 @@ function inspect(){
     return;
   }
   if(selCount()>1){
-    box.innerHTML=`<p class="note">Выделено объектов: <b>${selCount()}</b></p>
-      <div class="row"><button id="fDel">Удалить</button>
-      <button id="fDup">Дублировать</button></div>
-      <label>Выровнять по вертикали</label>
-      <div class="row"><button id="fAlign">По центру</button>
-      <button id="fSpread">Разложить</button></div>`;
+    box.innerHTML=`<p class="note">${t('i_selected',selCount())}</p>
+      <div class="row"><button id="fDel">${t('i_del')}</button>
+      <button id="fDup">${t('i_dup')}</button></div>
+      <label>${t('i_align_v')}</label>
+      <div class="row"><button id="fAlign">${t('i_align_c')}</button>
+      <button id="fSpread">${t('i_spread')}</button></div>`;
     $('#fDel').onclick=delSel; $('#fDup').onclick=dupSel;
     $('#fAlign').onclick=()=>{const m2=model();const ss=m2.shapes.filter(s=>sel.shapes.has(s.id));
       if(ss.length<2)return;push();
@@ -880,9 +1052,7 @@ function inspect(){
       ss.forEach((s,i)=>s.y=r2(top+step*i)); syncEdges(m2,ss.map(s=>s.id)); commit();};
     return;
   }
-  box.innerHTML=`<p class="note">Щёлкните по блоку, линии или подписи, чтобы
-    изменить их. Блок добавляется кнопками слева, связь — инструментом
-    <b>Связь</b>: щёлкните по блоку-источнику, затем по приёмнику.</p>`;
+  box.innerHTML=`<p class="note">${t('i_empty')}</p>`;
 }
 
 /* ---------- панель схем ---------- */
@@ -896,8 +1066,8 @@ function buildTree(filter){
       const d=document.createElement('div');d.className='sec';d.textContent=it.rel;
       box.appendChild(d);}
     const a=document.createElement('a');
-    a.innerHTML=`<span>${esc(it.name)}</span><span class="ln">${
-      it.custom?'своя':':'+it.line}</span>`;
+    a.innerHTML=`<span>${esc(nameOf(it))}</span><span class="ln">${
+      it.custom?t('own'):':'+it.line}</span>`;
     if(isEdited(it.anchor))a.classList.add('edited');
     if(cur===it.anchor)a.classList.add('active');
     a.onclick=()=>show(it.anchor);
@@ -907,34 +1077,69 @@ function buildTree(filter){
 function show(anchor){
   cur=anchor; clearSel(); hist=[]; future=[]; view=null; pending=null;
   const it=meta();
-  $('#figName').textContent=it.name;
+  $('#figName').textContent=nameOf(it);
   $('#figMeta').textContent=it.signature+(it.line?('  ·  '+it.rel+':'+it.line):'');
   const i=entries().findIndex(x=>x.anchor===anchor);
-  $('#caption').textContent='Рисунок '+(i+1)+' — Блок-схема алгоритма '+it.name;
-  document.title=it.name+' — '+DATA.title;
+  $('#caption').textContent=t('caption',i+1,nameOf(it));
+  document.title=nameOf(it)+' — '+t('app_title',DATA.folder||'');
   ensureView(model(),true);
   draw(); buildTree($('#search').value); inspect();
 }
 function newDoc(){
-  const name=prompt('Название новой схемы:','Схема '+(custom.length+1));
+  const name=prompt(t('m_new_name'),t('m_new_default',custom.length+1));
   if(!name)return;
   const anchor='custom_'+uid('d');
   custom.push({anchor,name});
   docs[anchor]=hydrate(emptyDoc(name));
-  saveStore(); show(anchor); toast('Создана пустая схема — добавляйте блоки слева');
+  saveStore(); show(anchor); toast(t('s_new'));
 }
 function delDoc(){
   const it=meta(); if(!it)return;
   if(it.custom){
-    if(!confirm('Удалить схему «'+it.name+'»?'))return;
+    if(!confirm(t('m_del_chart',nameOf(it))))return;
     custom=custom.filter(c=>c.anchor!==it.anchor); delete docs[it.anchor];
-    saveStore(); show(entries()[0].anchor); toast('Схема удалена');
+    saveStore(); show(entries()[0].anchor); toast(t('s_deleted'));
   }else{
-    if(!dirty.has(it.anchor)){toast('Правок нет');return;}
-    if(!confirm('Вернуть схему «'+it.name+'» к исходному виду?'))return;
+    if(!dirty.has(it.anchor)){toast(t('s_no_edits'));return;}
+    if(!confirm(t('m_reset_chart',nameOf(it))))return;
     delete docs[it.anchor]; dirty.delete(it.anchor);
-    saveStore(); show(it.anchor); toast('Правки сброшены');
+    saveStore(); show(it.anchor); toast(t('s_reset'));
   }
+}
+
+/* ---------- тема, язык, имя схемы ---------- */
+function applyTheme(){
+  document.body.dataset.theme=THEME;
+  const b=$('#btnTheme'); if(b)b.textContent=THEME==='dark'?'☀':'☾';
+  if(cur)draw();
+}
+function toggleTheme(){THEME=THEME==='dark'?'light':'dark';saveStore();applyTheme();}
+
+function applyLang(){
+  document.documentElement.lang=LANG;
+  const b=$('#btnLang'); if(b)b.textContent=LANG==='ru'?'EN':'RU';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent=t(el.getAttribute('data-i18n'));});
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    el.title=t(el.getAttribute('data-i18n-title'));});
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{
+    el.placeholder=t(el.getAttribute('data-i18n-ph'));});
+  $('#appTitle').textContent=t('app_title',DATA.folder||'');
+  $('#appSub').textContent=t('charts_count',DATA.items.length);
+  if(cur){show(cur);}
+}
+function toggleLang(){LANG=LANG==='ru'?'en':'ru';saveStore();applyLang();}
+
+function renameChart(){
+  const it=meta(); if(!it||!cur)return;
+  const name=prompt(t('m_rename'),nameOf(it));
+  if(name===null)return;
+  const clean=name.trim();
+  if(!clean||clean===nameOf(it))return;
+  names[cur]=clean;
+  const own=custom.find(c=>c.anchor===cur);
+  if(own)own.name=clean;
+  saveStore(); show(cur); toast(t('s_renamed'));
 }
 
 /* ---------- инструменты ---------- */
@@ -950,7 +1155,8 @@ function setTool(t){
 /* ---------- экспорт ---------- */
 function exportSVG(){
   const it=meta();
-  return renderSVG(model(),{title:it.name+(it.line?' — '+it.rel:''),name:it.name}).svg;
+  const title=exportTitle?(nameOf(it)+(it.line?' — '+it.rel:'')):null;
+  return renderSVG(model(),{title,name:nameOf(it)}).svg;
 }
 function download(blob,name){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
@@ -974,14 +1180,14 @@ async function doPng(copy){
   try{
     const blob=await svgToPng(exportSVG(),scale);
     if(copy){await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
-      toast('PNG скопирован — вставьте в отчёт (Ctrl+V)');}
-    else{download(blob,cur+'@'+scale+'x.png');toast('PNG сохранён');}
-  }catch(e){toast(copy?'Буфер недоступен — сохраните файлом':'Не удалось сделать PNG');}
+      toast(t('s_copied'));}
+    else{download(blob,fileBase()+'@'+scale+'x.png');toast(t('s_png'));}
+  }catch(e){toast(t(copy?'s_clip_fail':'s_png_fail'));}
 }
 function exportProject(){
-  download(new Blob([JSON.stringify({docs,custom},null,1)],
-    {type:'application/json'}),'blockwright-проект.json');
-  toast('Проект сохранён — его можно перенести на другой компьютер');
+  download(new Blob([JSON.stringify({docs,custom,names},null,1)],
+    {type:'application/json'}),'blockwright-project.json');
+  toast(t('s_proj_saved'));
 }
 function importProject(file){
   const rd=new FileReader();
@@ -990,20 +1196,32 @@ function importProject(file){
       docs=Object.assign(docs,d.docs||{});
       const have=new Set(custom.map(c=>c.anchor));
       for(const c of (d.custom||[]))if(!have.has(c.anchor))custom.push(c);
-      saveStore(); show(cur||entries()[0].anchor); toast('Проект загружен');
-    }catch(e){toast('Файл не похож на проект');}};
+      names=Object.assign(names,d.names||{});
+      saveStore(); show(cur||entries()[0].anchor); toast(t('s_proj_loaded'));
+    }catch(e){toast(t('s_proj_bad'));}};
   rd.readAsText(file);
 }
 
 /* ---------- запуск ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
   loadStore();
+  applyTheme();
+  applyLang();
   const hash=decodeURIComponent(location.hash.slice(1));
   const list=entries();
   show(list.find(i=>i.anchor===hash)?hash:list[0].anchor);
   $('#search').oninput=e=>buildTree(e.target.value);
   $('#btnNew').onclick=newDoc;
   $('#btnDel').onclick=delDoc;
+  $('#btnTheme').onclick=toggleTheme;
+  $('#btnLang').onclick=toggleLang;
+  $('#btnRename').onclick=renameChart;
+  $('#figName').ondblclick=renameChart;
+  const cap=$('#capTitle');
+  cap.checked=exportTitle;
+  cap.onchange=()=>{exportTitle=cap.checked;saveStore();};
+  $('#btnMenu').onclick=()=>document.body.classList.toggle('nav-open');
+  $('#tree').addEventListener('click',()=>document.body.classList.remove('nav-open'));
   document.querySelectorAll('[data-tool]').forEach(b=>
     b.onclick=()=>setTool(b.getAttribute('data-tool')));
   $('#zoomIn').onclick=()=>{zoom=Math.min(3,zoom*1.25);draw();};
@@ -1014,8 +1232,8 @@ window.addEventListener('DOMContentLoaded',()=>{
     zoom=Math.max(.2,Math.min(2,($('#stage').clientWidth-80)/out.w));draw();};
   $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
   $('#btnSvg').onclick=()=>{download(new Blob([exportSVG()],
-    {type:'image/svg+xml;charset=utf-8'}),cur+'.svg');
-    toast('SVG сохранён — открывается в Figma слоями');};
+    {type:'image/svg+xml;charset=utf-8'}),fileBase()+'.svg');
+    toast(t('s_svg'));};
   $('#btnPng').onclick=()=>doPng(false);
   $('#btnCopy').onclick=()=>doPng(true);
   $('#btnPrint').onclick=()=>window.print();
@@ -1063,95 +1281,99 @@ ICONS = {
     "preparation": '<polygon points="7,7 19,7 23,13 19,19 7,19 3,13"/>',
     "connector": '<circle cx="13" cy="13" r="7"/>',
 }
-TOOL_TITLES = {
-    "terminator": "Начало / конец  (1)", "process": "Процесс  (2)",
-    "io": "Ввод-вывод  (3)", "decision": "Решение  (4)",
-    "predefined": "Предопределённый процесс  (5)",
-    "preparation": "Подготовка / цикл  (6)", "connector": "Соединитель  (7)",
-}
+KINDS = ("terminator", "process", "io", "decision", "predefined",
+         "preparation", "connector")
 
 
 def _palette():
-    out = ['<button data-tool="select" class="on" title="Выбор и перемещение  (V)">'
-           '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1f2933" '
-           'stroke-width="1.6"><path d="M7 4 L7 20 L11 16 L14 22 L16 21 L13 15 L19 15 Z" '
-           'fill="#fff"/></svg></button>',
-           '<button data-tool="connect" title="Связь: щёлкните источник, затем приёмник  (C)">'
-           '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1f2933" '
-           'stroke-width="1.6"><path d="M5 6 H15 V19"/><path d="M12 16 L15 20 L18 16 Z" '
-           'fill="#1f2933"/></svg></button>',
-           '<button data-tool="label" title="Подпись  (T)">'
-           '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#1f2933" '
-           'stroke-width="1.8"><path d="M6 8 H20 M13 8 V19"/></svg></button>',
+    """Кнопки палитры; подписи проставляет applyLang() по data-i18n-title."""
+    ico = ('<svg width="26" height="26" viewBox="0 0 26 26" fill="none" '
+           'stroke="currentColor" stroke-width="1.6">')
+    out = [f'<button data-tool="select" class="on" data-i18n-title="t_select">{ico}'
+           '<path d="M7 4 L7 20 L11 16 L14 22 L16 21 L13 15 L19 15 Z" '
+           'fill="var(--panel)"/></svg></button>',
+           f'<button data-tool="connect" data-i18n-title="t_connect">{ico}'
+           '<path d="M5 6 H15 V19"/><path d="M12 16 L15 20 L18 16 Z" '
+           'fill="currentColor"/></svg></button>',
+           f'<button data-tool="label" data-i18n-title="t_label">{ico}'
+           '<path d="M6 8 H20 M13 8 V19" stroke-width="1.8"/></svg></button>',
            '<div class="gap"></div>']
-    for kind in ("terminator", "process", "io", "decision", "predefined",
-                 "preparation", "connector"):
-        out.append(f'<button data-tool="add:{kind}" title="{TOOL_TITLES[kind]}">'
-                   f'<svg width="26" height="26" viewBox="0 0 26 26" fill="#fff" '
-                   f'stroke="#1f2933" stroke-width="1.6">{ICONS[kind]}</svg></button>')
+    for kind in KINDS:
+        out.append(f'<button data-tool="add:{kind}" data-i18n-title="t_{kind}">'
+                   f'<svg width="26" height="26" viewBox="0 0 26 26" fill="var(--panel)" '
+                   f'stroke="currentColor" stroke-width="1.6">{ICONS[kind]}</svg></button>')
     return "".join(out)
 
 
-def render_html(entries, title="Блок-схемы", subtitle=""):
+def render_html(entries, title="Блок-схемы", folder="", lang="ru", theme="light"):
     """entries: список dict(rel, name, signature, line, anchor, model)."""
-    payload = json.dumps({"title": title, "items": entries},
+    payload = json.dumps({"folder": folder or title, "items": entries,
+                          "lang": lang, "theme": theme},
                          ensure_ascii=False, separators=(",", ":"))
     payload = payload.replace("</", "<\\/")
     return f"""<!DOCTYPE html>
-<html lang="ru"><head><meta charset="utf-8">
+<html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{xml_escape(title)}</title>
 <style>{CSS}</style></head>
-<body>
+<body data-theme="{theme}">
 <div class="topbar">
-  <div class="brand">{xml_escape(title)}<span class="sub"> · {xml_escape(subtitle)}</span></div>
+  <button id="btnMenu" class="only-narrow" data-i18n-title="b_menu_t">☰</button>
+  <div class="brand"><span id="appTitle">{xml_escape(title)}</span>
+    <span class="sub"> · <span id="appSub"></span></span></div>
   <div class="grow"></div>
   <div class="group">
-    <button id="btnUndo" title="Отменить (Ctrl+Z)">↶</button>
-    <button id="btnRedo" title="Повторить (Ctrl+Shift+Z)">↷</button>
+    <button id="btnUndo" data-i18n-title="b_undo">↶</button>
+    <button id="btnRedo" data-i18n-title="b_redo">↷</button>
   </div>
   <div class="sep"></div>
   <div class="group">
-    <select id="scale" title="Масштаб растра">
+    <label class="check" data-i18n-title="cap_title_t">
+      <input type="checkbox" id="capTitle" checked>
+      <span data-i18n="cap_title"></span></label>
+    <select id="scale" title="PNG">
       <option value="1">PNG ×1</option><option value="2" selected>PNG ×2</option>
       <option value="3">PNG ×3</option><option value="4">PNG ×4</option>
     </select>
-    <button id="btnCopy" class="primary" title="Скопировать картинку в буфер обмена">Копировать</button>
-    <button id="btnPng">PNG</button>
-    <button id="btnSvg" title="Вектор для Word и Figma">SVG</button>
-    <button id="btnPrint">Печать</button>
+    <button id="btnCopy" class="primary" data-i18n="b_copy" data-i18n-title="b_copy_t"></button>
+    <button id="btnPng" data-i18n="b_png"></button>
+    <button id="btnSvg" data-i18n="b_svg" data-i18n-title="b_svg_t"></button>
+    <button id="btnPrint" class="wide" data-i18n="b_print"></button>
   </div>
   <div class="sep"></div>
   <div class="group">
-    <button id="btnSave" title="Выгрузить все правки и свои схемы в файл">Проект…</button>
-    <button id="btnLoad" title="Загрузить проект из файла">Открыть</button>
+    <button id="btnSave" class="wide" data-i18n="b_project" data-i18n-title="b_project_t"></button>
+    <button id="btnLoad" class="wide" data-i18n="b_open" data-i18n-title="b_open_t"></button>
     <input id="fileIn" type="file" accept=".json,application/json" hidden>
+    <button id="btnTheme" data-i18n-title="b_theme_t">☾</button>
+    <button id="btnLang" data-i18n-title="b_lang_t">EN</button>
   </div>
 </div>
 
 <div class="layout">
   <aside class="nav">
     <div class="navhead">
-      <input id="search" type="search" placeholder="Поиск схемы…">
-      <button id="btnNew" title="Создать пустую схему">＋</button>
+      <input id="search" type="search" data-i18n-ph="search">
+      <button id="btnNew" data-i18n-title="b_new_t">＋</button>
     </div>
     <div class="tree" id="tree"></div>
-    <div style="padding:8px 10px;border-top:1px solid var(--line)">
-      <button id="btnDel" class="ghost" style="width:100%;color:var(--danger)"
-        title="Сбросить правки схемы или удалить свою схему">Сбросить / удалить</button>
+    <div class="navfoot">
+      <button id="btnDel" class="ghost danger" data-i18n="b_del" data-i18n-title="b_del_t"></button>
     </div>
   </aside>
 
   <main>
     <div class="toolbar">
-      <span class="name" id="figName"></span>
+      <span class="name" id="figName" data-i18n-title="b_rename_t"></span>
+      <button id="btnRename" class="ghost tiny" data-i18n-title="b_rename_t">✎</button>
       <span class="meta" id="figMeta"></span>
       <div class="grow"></div>
       <div class="group">
-        <button id="zoomOut" title="Уменьшить">−</button>
+        <button id="zoomOut" data-i18n-title="z_out">−</button>
         <span class="zoomval" id="zoomVal">100%</span>
-        <button id="zoomIn" title="Увеличить">+</button>
-        <button id="zoom100">1:1</button><button id="zoomFit">Вписать</button>
+        <button id="zoomIn" data-i18n-title="z_in">+</button>
+        <button id="zoom100">1:1</button>
+        <button id="zoomFit" class="wide" data-i18n="z_fit"></button>
       </div>
     </div>
     <div class="work">
@@ -1164,7 +1386,7 @@ def render_html(entries, title="Блок-схемы", subtitle=""):
   </main>
 
   <aside class="insp">
-    <h3>Свойства</h3>
+    <h3 data-i18n="props"></h3>
     <div id="inspBody"></div>
   </aside>
 </div>
