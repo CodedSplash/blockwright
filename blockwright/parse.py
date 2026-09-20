@@ -18,7 +18,8 @@ ALL_EXT = C_EXT | CPP_EXT | H_EXT
 
 SKIP_DIRS = {".git", ".svn", "node_modules", "build", "cmake-build-debug",
              "cmake-build-release", "Debug", "Release", ".vs", ".idea",
-             "x64", "x86", "__pycache__", "venv", ".venv"}
+             "x64", "x86", "__pycache__", "venv", ".venv", "vendor",
+             "third_party", "external"}
 
 CPP_MARKERS = ("std::", "class ", "namespace ", "template<", "template <",
                "public:", "private:", "protected:", "::", "#include <iostream>",

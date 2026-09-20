@@ -2,10 +2,9 @@
 
 <img src="docs/banner.png" width="840" alt="blockwright — flowcharts from C/C++ source code">
 
-<p>
-  <strong>Turn C and C++ source code into GOST&nbsp;19.701-90 flowcharts.</strong><br>
-  Vector SVG for your report — and a real diagram editor in the browser.
-</p>
+### Turn C and C++ source code into GOST&nbsp;19.701-90 flowcharts
+
+Vector SVG for your report — and a real diagram editor in the browser.
 
 <p>
   <a href="https://github.com/CodedSplash/blockwright/actions/workflows/ci.yml"><img src="https://github.com/CodedSplash/blockwright/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -16,9 +15,16 @@
   <img src="https://img.shields.io/badge/parser-tree--sitter-ff7043?style=flat-square" alt="tree-sitter">
 </p>
 
-<p>
-  <b>English</b> · <a href="README.ru.md">Русский</a>
-</p>
+**English** · [Русский](README.ru.md)
+
+<a href="#-quick-start">Quick start</a> ·
+<a href="#-pick-sources-in-the-terminal">Terminal picker</a> ·
+<a href="#-command-line">CLI</a> ·
+<a href="#-the-editor">Editor</a> ·
+<a href="#-how-code-becomes-a-chart">Block mapping</a> ·
+<a href="#-standalone-executable">Binary</a>
+
+<br>
 
 <img src="docs/editor.png" width="880" alt="Browser editor with a generated flowchart">
 
@@ -26,43 +32,31 @@
 
 ---
 
-## What it does
+## ✨ What you get
 
-`blockwright` reads your sources, parses them with the real
-[tree-sitter](https://tree-sitter.github.io) grammars for C and C++, and draws a
-flowchart for every function it finds — as a standalone `.svg` and as an album
-page you can actually edit.
+|  |  |
+|---|---|
+| 🧠 **Real parsing** | tree-sitter grammars for C and C++: classes, templates, namespaces, overloads, range-`for`, `switch` with fallthrough, `goto`, `try/catch` — never regular expressions |
+| 📁 **Whole projects** | directories are walked recursively, the language of each file is detected automatically, and a file that fails one grammar is retried with the other |
+| 💬 **Readable blocks** | `cout << "Score #" << i << ": "` becomes `Вывод: Score #{i}:`, and `printf("Total: %d\n", s)` becomes `Вывод: Total: {s}` |
+| ✏️ **A real editor** | drag blocks, reshape connectors, re-attach arrows, add shapes from a palette, draw a chart from scratch, undo, export |
+| 📄 **Report ready** | SVG drops into Word as vector, PNG goes straight to the clipboard, every diagram is captioned `Рисунок N — …` |
+| 🎨 **Figma friendly** | arrows are real polygons and shapes sit in named groups, so the file opens as a clean layer tree |
+| 🎒 **Portable** | parsers ship with the repository — clone and run, or build a single executable |
 
-> **Note on language.** Diagram labels and the interface are in Russian, because
-> the tool targets GOST 19.701-90 — the flowchart standard used in Russian
-> engineering coursework. The code, CLI and this documentation are in English.
-
-## Highlights
-
-- **It understands the language, not the text.** Classes, templates, namespaces,
-  overloads, range-`for`, `switch` with fallthrough, `goto`, `try/catch` —
-  handled through the actual syntax tree, never regular expressions.
-- **Whole projects.** Directories are walked recursively, the language of every
-  file is detected automatically, and a file that fails one grammar is retried
-  with the other.
-- **Readable block text.** `cout << "Score #" << i << ": "` becomes
-  `Вывод: Score #{i}:`, and `printf("Total: %d\n", s)` becomes `Вывод: Total: {s}`
-  — string literals and values are woven into one sentence instead of a pile of
-  quotes and commas.
-- **A real editor, not a picture.** Drag blocks, reshape connectors, re-attach
-  arrows, add shapes from a palette, draw a chart from scratch, undo, export.
-- **Report ready.** SVG drops into Word as vector, PNG goes straight to the
-  clipboard, every diagram is captioned `Рисунок N — …`.
-- **Figma friendly.** Arrows are real polygons and shapes sit in named groups,
-  so the SVG opens as a clean layer tree instead of anonymous paths.
-- **Portable.** Copy the folder and run it — parsers ship with the repository.
-  Or build a single executable for Windows and Linux.
+> [!NOTE]
+> Diagram labels and the interface are in Russian: the tool targets GOST 19.701-90,
+> the flowchart standard used in Russian engineering coursework. Code, CLI and
+> documentation are in English.
 
 <div align="center">
   <img src="docs/example-switch.png" width="620" alt="Generated flowchart for a switch statement">
+  <br><sub>A <code>switch</code> turned into a chart — one column per <code>case</code>, captioned and ready for a report</sub>
 </div>
 
-## Quick start
+---
+
+## 🚀 Quick start
 
 ```bash
 git clone https://github.com/CodedSplash/blockwright.git
@@ -70,14 +64,14 @@ cd blockwright
 python -m blockwright examples --open
 ```
 
-Python 3.10+ is the only requirement — parsers are bundled, nothing to install.
+That is all: Python 3.10+ is the only requirement, the parsers are bundled.
 
 | Platform | Launcher |
 |----------|----------|
-| Windows  | double-click `blockwright.bat` |
-| Linux / macOS | `chmod +x blockwright.sh` once, then `./blockwright.sh` |
+| **Windows** | double-click `blockwright.bat`, or grab [`blockwright.exe`](https://github.com/CodedSplash/blockwright/releases/latest) |
+| **Linux / macOS** | `chmod +x blockwright.sh` once, then `./blockwright.sh` |
 
-Output lands in a `блок-схемы` folder next to the sources:
+Everything lands in a `блок-схемы` folder next to the sources:
 
 ```
 блок-схемы/
@@ -87,34 +81,26 @@ Output lands in a `блок-схемы` folder next to the sources:
 └── grades__average.svg
 ```
 
-## Interactive picker
+---
 
-Run it with no arguments and you get a file navigator in the terminal: `→` enters
-a folder, `←` goes up, `Space` marks a file — or a whole folder, recursively. The
-function list on the right updates as you go, and any function can be switched
-off. Mouse and keyboard both work.
+## 🖥 Pick sources in the terminal
 
-```text
-  Блок-схемы C / C++   ·   выбор исходников
- Папка: ~/projects/blockwright                     отмечено файлов: 1
+Run with no arguments and you get a file navigator: `→` enters a folder, `←`
+goes up, `Space` marks a file — or a whole folder, recursively (the `1/1` badge
+shows how many sources inside are selected). The function list updates as you
+move, and any function can be switched off. Mouse and keyboard both work.
 
- ФАЙЛЫ И ПАПКИ                     ФУНКЦИИ  3 из 3
- ❯ ↑ ..  на уровень выше           ❯ ◉ verdict            grades.cpp:12
-   ▸ examples/  1/1                  ◉ average            grades.cpp:29
-   ▸ docs/      0/0                  ◉ main               grades.cpp:38
+<div align="center">
+  <img src="docs/picker.png" width="880" alt="Terminal source picker">
+</div>
 
-╭── Настройки ──────────────────────────────────────────────────────────╮
-│ f цикл for ........ как в коде      w ширина текста ... 38            │
-│ i ввод-вывод ...... связной фразой  p растр PNG ....... не делать     │
-│ r return .......... авто            s префикс std:: ... убирать       │
-╰───────────────────────────────────────────────────────────────────────╯
- ↑↓ выбор  Space отметить  → в папку  ← наверх  Tab панель  a/n все/снять
- / поиск  Enter ПОСТРОИТЬ  q выход
-```
+> [!TIP]
+> Settings at the bottom toggle with single letters — `f` `i` `r` `w` `p` `s` —
+> and are remembered until the next run.
 
-Settings toggle with single letters and are remembered between runs.
+---
 
-## Command line
+## ⌨️ Command line
 
 ```bash
 python -m blockwright "Lab 1"                      # one folder
@@ -126,6 +112,8 @@ python -m blockwright . --list                     # just list what was found
 
 <details>
 <summary><b>All options</b></summary>
+
+<br>
 
 | Option | Meaning |
 |--------|---------|
@@ -148,25 +136,35 @@ python -m blockwright . --list                     # just list what was found
 
 </details>
 
-## The editor
+---
+
+## 🎨 The editor
 
 `index.html` is not an image — the model of every diagram is embedded in the
 page and the browser redraws it with the same algorithm the Python side uses.
 
-- Blocks drag, handles resize them. **Connectors stay attached**: an endpoint
+- **Blocks** drag, handles resize them. Connectors stay attached: an endpoint
   travels with its own block, always meets it along the side normal, and never
   tears off the block at the other end.
-- Clicking a connector reveals its nodes — drag them, add new ones, or drop an
-  endpoint onto another block to re-attach it. *Reroute* rebuilds the path.
-- Palette on the left: **Select** (V), **Connector** (C), **Label** (T) and the
-  seven GOST block types (keys `1`–`7`).
-- `Ctrl+Z` / `Ctrl+Shift+Z`, `Ctrl+D`, `Del`, arrow keys to nudge, `Alt` to
-  ignore the grid, `Shift` to extend the selection.
+- **Connectors** reveal their nodes on click — drag them, add new ones, or drop
+  an endpoint onto another block to re-attach it. *Reroute* rebuilds the path.
+- **Palette**: Select (<kbd>V</kbd>), Connector (<kbd>C</kbd>), Label
+  (<kbd>T</kbd>) and the seven GOST block types (<kbd>1</kbd>–<kbd>7</kbd>).
+- **Shortcuts**: <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>,
+  <kbd>Ctrl</kbd>+<kbd>D</kbd>, <kbd>Del</kbd>, arrows to nudge, <kbd>Alt</kbd>
+  to ignore the grid, <kbd>Shift</kbd> to extend the selection.
 - **＋** starts an empty chart, so you can draw an algorithm that has no code yet.
 - **Проект…** exports every edit and custom chart as one `.json`; **Открыть**
   loads it back. Edits live in the browser and never touch your files.
 
-## How code maps to blocks
+---
+
+## 🔤 How code becomes a chart
+
+<details open>
+<summary><b>Construct → block</b></summary>
+
+<br>
 
 | Construct | Block |
 |-----------|-------|
@@ -185,22 +183,47 @@ page and the browser redraws it with the same algorithm the Python side uses.
 | `goto`, label | on-page connector |
 | `throw`, `try / catch` | terminator `Исключение: …`, decision for the handler |
 
+</details>
+
 <div align="center">
-  <img src="docs/example-main.png" width="430" alt="Generated flowchart for main()">
+  <img src="docs/example-main.png" width="420" alt="Generated flowchart for main()">
+  <br><sub><code>main()</code> from <a href="examples/grades.cpp">examples/grades.cpp</a></sub>
 </div>
 
-## Standalone executable
+---
+
+## 📦 Standalone executable
 
 ```bash
 pip install pyinstaller
 python build.py
 ```
 
-Produces `dist/blockwright.exe` (Windows, ~9 MB) or `dist/blockwright` (Linux),
-with Python and the parsers inside — copy it anywhere and run. Build on the
-system you are targeting; WSL works for the Linux binary.
+Produces `dist/blockwright.exe` (Windows, ~9 MB) or `dist/blockwright` (Linux)
+with Python and the parsers inside — copy it anywhere and run.
 
-## Project layout
+> [!IMPORTANT]
+> Build on the system you are targeting: an `.exe` on Windows, a Linux binary on
+> Linux (WSL works). A ready Windows build is attached to every
+> [release](https://github.com/CodedSplash/blockwright/releases/latest).
+
+---
+
+## 🧱 How it works
+
+Layout is **structural**: every construct places itself and returns a frame with
+its entry on top and its exit at the bottom, both on the same vertical spine, so
+blocks stack without overlaps. `break` and `continue` escape sideways through
+free lanes and are closed by the loop that owns them.
+
+The editor receives the model rather than a picture and renders it with the same
+algorithm — the two outputs were diffed and agree to within 0.01 px, so editing a
+block in the browser yields exactly the SVG a rebuild would produce.
+
+<details>
+<summary><b>Project layout</b></summary>
+
+<br>
 
 ```text
 blockwright/
@@ -214,22 +237,24 @@ blockwright/
 ├── tui.py          terminal picker
 ├── png.py          raster export via headless Chrome/Edge
 └── text.py         text wrapping and measurement
-tools/vendor.py     rebuild the bundled parsers
+tools/
+├── vendor.py             rebuild the bundled parsers
+└── screenshot_picker.py  render the picker screenshot for the docs
 build.py            single-file build
 ```
 
-## How it works
+</details>
 
-Layout is **structural**: every construct places itself and returns a frame with
-its entry on top and its exit at the bottom, both on the same vertical spine, so
-blocks stack without overlaps. `break` and `continue` escape sideways through
-free lanes and are closed by the loop that owns them.
+---
 
-The editor receives the model rather than a picture and renders it with the same
-algorithm — the two outputs were diffed and agree to within 0.01 px, so editing a
-block in the browser yields exactly the SVG a rebuild would produce.
+## 🙏 Acknowledgements
 
-## License
+Parsing rests on [tree-sitter](https://github.com/tree-sitter/tree-sitter) and
+its [C](https://github.com/tree-sitter/tree-sitter-c) and
+[C++](https://github.com/tree-sitter/tree-sitter-cpp) grammars.
 
-[MIT](LICENSE). The parsers under `vendor/` belong to the tree-sitter project and
-are distributed under the same license.
+## 📄 License
+
+[MIT](LICENSE) — see [CHANGELOG.md](CHANGELOG.md) for release notes. The parsers
+under `vendor/` belong to the tree-sitter project and are redistributed under the
+same license.
