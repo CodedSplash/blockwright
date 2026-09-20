@@ -1,6 +1,8 @@
 # Python
+# ВНИМАНИЕ: не писать *.py[cod] — шаблон заодно съедает *.pyd,
+# а это бинарные модули парсеров в vendor/
 __pycache__/
-*.py[cod]
+*.py[co]
 *.egg-info/
 .venv/
 venv/
