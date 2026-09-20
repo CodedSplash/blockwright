@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# сборка исполняемого файла
+build/
+dist/
+*.spec
+
+# результаты работы утилиты
+блок-схемы/
+flowcharts/
+.blockwright-prefs.json
+
+# редакторы и система
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

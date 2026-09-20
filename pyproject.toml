@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blockwright"
+version = "1.0.0"
+description = "Блок-схемы по исходному коду C и C++ в нотации ГОСТ 19.701-90"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+keywords = ["flowchart", "блок-схема", "гост", "c", "cpp", "tree-sitter", "svg"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Documentation",
+    "Natural Language :: Russian",
+]
+dependencies = [
+    "tree_sitter>=0.23",
+    "tree_sitter_c>=0.23",
+    "tree_sitter_cpp>=0.23",
+]
+
+[project.scripts]
+blockwright = "blockwright.__main__:main"
+
+[tool.setuptools]
+packages = ["blockwright"]
