@@ -143,7 +143,7 @@ PAGE = """<!doctype html><meta charset="utf-8">
     <div class="dot" style="background:#ff5f57"></div>
     <div class="dot" style="background:#febc2e"></div>
     <div class="dot" style="background:#28c840"></div>
-    <div class="title">blockwright — выбор исходников</div>
+    <div class="title">{cap}</div>
   </div>
   <div class="screen">{body}</div>
 </div>"""
@@ -171,7 +171,11 @@ def main():
     ap = argparse.ArgumentParser(description="Скриншот консольного выбора")
     ap.add_argument("--source", default=ROOT, help="папка, которую показывать")
     ap.add_argument("--png", action="store_true", help="сразу растеризовать")
+    ap.add_argument("--lang", choices=["ru", "en"], default="ru",
+                    help="язык интерфейса на скриншоте")
+    ap.add_argument("--out", default=None, help="имя файла без расширения")
     args = ap.parse_args()
+    tui.LANG = args.lang
 
     raw = capture(args.source)
     rows = {}
@@ -180,12 +184,15 @@ def main():
     body = "\n".join(f'<div class="ln">{ansi_to_html(rows.get(i, "")) or "&nbsp;"}</div>'
                      for i in range(1, ROWS + 1))
 
-    out_html = os.path.join(ROOT, "docs", "picker.html")
+    stem = args.out or ("picker" if args.lang == "ru" else "picker-en")
+    out_html = os.path.join(ROOT, "docs", stem + ".html")
     with open(out_html, "w", encoding="utf-8") as fh:
-        fh.write(PAGE.format(body=body, fg=FG, bg=BG))
+        fh.write(PAGE.format(body=body, fg=FG, bg=BG,
+                             cap="blockwright — " + ("выбор исходников"
+                                 if args.lang == "ru" else "pick the sources")))
     print(out_html)
     if args.png:
-        out_png = os.path.join(ROOT, "docs", "picker.png")
+        out_png = os.path.join(ROOT, "docs", stem + ".png")
         print(out_png if render_png(out_html, out_png) else "PNG не создан")
     return 0
 
