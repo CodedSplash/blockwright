@@ -16,19 +16,50 @@ from . import model as M
 from .layout import FONT_SIZE, LINE_H, LABEL_SIZE
 from .text import FONT_MONO, FONT_UI, wrap_text, xml_escape
 
-STROKE = "#1f2933"
-LINE = "#1f2933"
-TEXT = "#10151b"
-
-FILL = {
-    M.PROCESS: "#ffffff",
-    M.IO: "#eef4ff",
-    M.DECISION: "#fff6e5",
-    M.TERMINATOR: "#e9f3ec",
-    M.PREDEF: "#f3eefc",
-    M.PREP: "#e8f5f1",
-    M.CONNECTOR: "#ffffff",
+THEMES = {
+    "light": {
+        "stroke": "#1f2933", "text": "#10151b", "bg": "#ffffff",
+        "fill": {
+            M.PROCESS: "#ffffff",
+            M.IO: "#eef4ff",
+            M.DECISION: "#fff6e5",
+            M.TERMINATOR: "#e9f3ec",
+            M.PREDEF: "#f3eefc",
+            M.PREP: "#e8f5f1",
+            M.CONNECTOR: "#ffffff",
+        },
+    },
+    "dark": {
+        "stroke": "#9aa4b2", "text": "#e9eef5", "bg": "#11161d",
+        "fill": {
+            M.PROCESS: "#1a212b",
+            M.IO: "#152436",
+            M.DECISION: "#2c2517",
+            M.TERMINATOR: "#152a20",
+            M.PREDEF: "#231d33",
+            M.PREP: "#14271f",
+            M.CONNECTOR: "#1a212b",
+        },
+    },
 }
+
+# текущая палитра; меняется через use_theme()
+STROKE = THEMES["light"]["stroke"]
+LINE = STROKE
+TEXT = THEMES["light"]["text"]
+BACKGROUND = THEMES["light"]["bg"]
+FILL = dict(THEMES["light"]["fill"])
+
+
+def use_theme(name):
+    """Переключает палитру отрисовки на светлую или тёмную."""
+    global STROKE, LINE, TEXT, BACKGROUND, FILL
+    theme = THEMES.get(name) or THEMES["light"]
+    STROKE = LINE = theme["stroke"]
+    TEXT = theme["text"]
+    BACKGROUND = theme["bg"]
+    FILL = dict(theme["fill"])
+    return theme
 
 KIND_RU = {
     M.PROCESS: "Процесс",
@@ -72,7 +103,7 @@ def shape_outline(s):
     """Контур фигуры в виде готового SVG-элемента (без текста)."""
     x, y, w, h = s["x"], s["y"], s["w"], s["h"]
     k = s["kind"]
-    fill = FILL.get(k, "#ffffff")
+    fill = FILL.get(k, BACKGROUND)
     st = f'fill="{fill}" stroke="{STROKE}" stroke-width="1.6"'
     if k == M.TERMINATOR:
         return [f'<rect x="{n(x)}" y="{n(y)}" width="{n(w)}" height="{n(h)}" '
@@ -179,7 +210,9 @@ def label_svg(l):
 
 
 # -------------------------------------------------------------------- SVG
-def render_svg(frame, title=None, standalone=True, name="Блок-схема"):
+def render_svg(frame, title=None, standalone=True, name="Блок-схема", theme=None):
+    if theme:
+        use_theme(theme)
     number_shapes(frame)
     b = frame.bbox()
     x0, y0, x1, y1 = b
@@ -189,7 +222,8 @@ def render_svg(frame, title=None, standalone=True, name="Блок-схема"):
     dx = MARGIN - x0
     dy = top - y0
 
-    parts = [f'<rect id="Фон" x="0" y="0" width="{n(w)}" height="{n(h)}" fill="#ffffff"/>']
+    parts = [f'<rect id="Фон" x="0" y="0" width="{n(w)}" height="{n(h)}" '
+             f'fill="{BACKGROUND}"/>']
     if title:
         parts.append(f'<text id="Заголовок" x="{n(w/2)}" y="{n(MARGIN + 6)}" '
                      f'text-anchor="middle" font-family="{FONT_UI}" font-size="15" '
