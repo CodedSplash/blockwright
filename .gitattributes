@@ -4,3 +4,4 @@
 *.pyd binary
 *.so binary
 *.dll binary
+*.wasm binary

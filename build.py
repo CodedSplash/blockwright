@@ -85,6 +85,13 @@ def main():
         cmd += ["--hidden-import", mod, "--collect-binaries", mod]
     for mod in ("blockwright.tui", "blockwright.album", "blockwright.png"):
         cmd += ["--hidden-import", mod]
+    # трассировщик линий для редактора — встраивается в index.html
+    web = os.path.join(BASE, "vendor", "web")
+    if os.path.isdir(web):
+        cmd += ["--add-data", f"{web}{os.pathsep}{os.path.join('vendor', 'web')}"]
+    else:
+        print("Нет vendor/web — редактор будет прокладывать линии упрощённо.",
+              file=sys.stderr)
     cmd += ["--paths", BASE, "--hidden-import", "blockwright"]
     cmd.append(os.path.join(BASE, "tools", "entry.py"))
 

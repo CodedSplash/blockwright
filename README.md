@@ -149,11 +149,15 @@ python -m blockwright . --list                     # just list what was found
 `index.html` is not an image — the model of every diagram is embedded in the
 page and the browser redraws it with the same algorithm the Python side uses.
 
-- **Blocks** drag, handles resize them. Connectors stay attached: an endpoint
-  travels with its own block, always meets it along the side normal, and never
-  tears off the block at the other end.
+- **Blocks** drag, handles resize them. Connectors are routed by
+  [libavoid](https://github.com/mjwybrow/adaptagrams) — the router behind
+  Inkscape's connectors: orthogonal paths that go around blocks, leave and
+  enter a block square to its side, and keep their shape when a block merely
+  brushes past them. Joints never tear off, and dragging a block back restores
+  the original lines exactly.
 - **Connectors** reveal their nodes on click — drag them, add new ones, or drop
-  an endpoint onto another block to re-attach it. *Reroute* rebuilds the path.
+  an endpoint onto another block to re-attach it. *Reroute* rebuilds the path
+  and lets the router pick the sides.
 - **Palette**: Select (<kbd>V</kbd>), Connector (<kbd>C</kbd>), Label
   (<kbd>T</kbd>) and the seven GOST block types (<kbd>1</kbd>–<kbd>7</kbd>).
 - **Shortcuts**: <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>,
@@ -272,6 +276,12 @@ The editor receives the model rather than a picture and renders it with the same
 algorithm — the two outputs were diffed and agree to within 0.01 px, so editing a
 block in the browser yields exactly the SVG a rebuild would produce.
 
+Lines stay exactly as the layout drew them until you touch something. Then
+libavoid, compiled to WebAssembly and inlined into `index.html` (≈ 0.7 MB),
+reroutes only the affected connectors. The page needs no server and no network,
+so it works from `file://` on Windows, Linux and Android alike; should a browser
+refuse WebAssembly, the editor falls back to its simple built-in router.
+
 <details>
 <summary><b>Project layout</b></summary>
 
@@ -290,7 +300,7 @@ blockwright/
 ├── png.py          raster export via headless Chrome/Edge
 └── text.py         text wrapping and measurement
 tools/
-├── vendor.py             rebuild the bundled parsers
+├── vendor.py             rebuild vendor/: parsers and the connector router
 ├── install-termux.sh     one-shot setup for Android/Termux
 └── screenshot_picker.py  render the picker screenshot for the docs
 build.py            single-file build
@@ -304,10 +314,14 @@ build.py            single-file build
 
 Parsing rests on [tree-sitter](https://github.com/tree-sitter/tree-sitter) and
 its [C](https://github.com/tree-sitter/tree-sitter-c) and
-[C++](https://github.com/tree-sitter/tree-sitter-cpp) grammars.
+[C++](https://github.com/tree-sitter/tree-sitter-cpp) grammars. Connectors in the
+editor are routed by libavoid from [Adaptagrams](https://github.com/mjwybrow/adaptagrams),
+built for the browser by [libavoid-js](https://github.com/Aksem/libavoid-js).
 
 ## 📄 License
 
 [MIT](LICENSE) — see [CHANGELOG.md](CHANGELOG.md) for release notes. The parsers
 under `vendor/` belong to the tree-sitter project and are redistributed under the
-same license.
+same license. `vendor/web/libavoid` is libavoid-js, distributed under
+[LGPL-2.1-or-later](vendor/web/libavoid/LICENSE) as a separate, unmodified
+WebAssembly module; `python tools/vendor.py --web` fetches it again.

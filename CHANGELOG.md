@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-09-22
+
+### Changed
+
+- **Connectors in the editor are routed by libavoid** (Adaptagrams, the router
+  behind Inkscape's connectors) instead of the hand-written code that bent,
+  doubled back and tore off when blocks moved. Paths are orthogonal, go around
+  blocks, meet each block square to its side and separate when they run side by
+  side. A line that a block merely brushes keeps its course and detours locally;
+  joints between line pieces follow the reroute; dragging a whole construct just
+  moves its lines; and every drag is computed from the state at its start, so
+  bringing a block back restores the original lines exactly.
+- *Reroute* and the Connector tool let the router choose the sides (out of the
+  bottom or a side, into the top or a side); decision exits keep their
+  Yes/No sides.
+
+### Added
+
+- `vendor/web/libavoid`: libavoid-js 0.5.0-beta.5 as WebAssembly, inlined into
+  `index.html` (≈ 0.7 MB), so the album stays a single offline file that works
+  from `file://` on Windows, Linux and Android. The single-file binary carries it
+  too. `python tools/vendor.py --web` fetches it again, verifying the checksum;
+  Node.js is not needed. Without the folder, or in a browser without
+  WebAssembly, the editor falls back to the old router.
+
+### Fixed
+
+- Moving a block no longer snaps a group apart: the block under the cursor
+  snaps to the grid and the rest of the selection follows by the same offset.
+
 ## [1.2.0] — 2026-09-22
 
 ### Added
@@ -78,6 +108,7 @@ First public release.
   3.10–3.14) ship with the repository, so no installation is required.
 - **Single-file build** via PyInstaller for Windows and Linux.
 
+[1.3.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.3.0
 [1.2.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.2.0
 [1.1.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.0.0

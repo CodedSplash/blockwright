@@ -65,6 +65,16 @@ def activate(root=None):
     return have_parsers()
 
 
+def web_asset(*parts):
+    """Файл из vendor/web (библиотеки редактора) или None, если его нет.
+
+    Они одни на все платформы. В собранном exe папка лежит внутри архива
+    PyInstaller, и ROOT указывает как раз туда.
+    """
+    p = os.path.join(ROOT, "vendor", "web", *parts)
+    return p if os.path.isfile(p) else None
+
+
 def install_hint():
     """Понятное объяснение, что делать, если парсеров нет."""
     req = os.path.join(ROOT, "requirements.txt")

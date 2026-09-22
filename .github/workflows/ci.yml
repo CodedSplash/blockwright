@@ -39,7 +39,8 @@ jobs:
           if missing:
               sys.exit("missing: " + ", ".join(missing))
           page = (out / "index.html").read_text(encoding="utf-8")
-          for marker in ("<svg", "Вывод:", "blockwright"):
+          # AVOID_WASM — трассировщик линий из vendor/web встроен в страницу
+          for marker in ("<svg", "Вывод:", "blockwright", "AvoidModule", "AVOID_WASM"):
               if marker not in page:
                   sys.exit(f"album looks broken: {marker!r} not found")
           print("ok:", ", ".join(p.name for p in sorted(out.iterdir())))
@@ -86,6 +87,7 @@ jobs:
           test -f binary-out/index.html
           test -f binary-out/grades__main.svg
           grep -q "Вывод:" binary-out/grades__main.svg
+          grep -q "AVOID_WASM" binary-out/index.html
 
       - uses: actions/upload-artifact@v4
         with:

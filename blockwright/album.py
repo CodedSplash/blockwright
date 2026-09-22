@@ -1,10 +1,12 @@
 """Альбом-редактор блок-схем (index.html).
 
-Одностраничное приложение без внешних зависимостей: в файл кладётся
-модель каждой схемы (фигуры, линии, подписи), а браузер рисует её сам
-тем же алгоритмом, что и Python. Это даёт полноценный редактор:
+Одностраничное приложение, которому не нужны ни сеть, ни сервер: в файл
+кладётся модель каждой схемы (фигуры, линии, подписи), а браузер рисует
+её сам тем же алгоритмом, что и Python. Линии при правке прокладывает
+libavoid (Adaptagrams) — он встроен в страницу из vendor/web. Это даёт
+полноценный редактор:
 
-* перетаскивание блоков и изменение их размеров, линии тянутся следом;
+* перетаскивание блоков и изменение их размеров, линии обходят блоки;
 * правка узлов линии, перепривязка концов к другим блокам;
 * создание схем с нуля — палитра блоков, инструмент связи, подписи;
 * отмена/повтор, копирование, выравнивание по сетке;
@@ -12,9 +14,11 @@
 * сохранение в браузере и выгрузка всего проекта одним .json-файлом.
 """
 
+import base64
 import json
 
 from .text import xml_escape
+from .vendored import web_asset
 
 CSS = r"""
 *,*::before,*::after{box-sizing:border-box}
@@ -538,32 +542,317 @@ function fixEnd(e,isFrom){
   if(isFrom)e.points.splice(1,k-1,...ins);
   else e.points.splice(k+1,last-k-1,...ins.reverse());
 }
-/* Конец линии переезжает вместе со «своим» блоком.
-   Соседний узел подтягивается только если он не привязан к другому блоку —
-   иначе линия отрывалась бы от соседа; вместо этого добавляется излом. */
-function syncEdges(m,shapeIds){
-  const ids=new Set(shapeIds);
-  for(const e of m.edges){
-    let touched=false;
-    for(const idx of [0,e.points.length-1]){
-      const ref=idx===0?e.from:e.to;
-      if(!ref||!ids.has(ref.id))continue;
-      const np=anchorPt(m,ref); if(!np)continue;
-      const old=e.points[idx].slice();
-      const dx=np[0]-old[0], dy=np[1]-old[1];
-      if(!dx&&!dy)continue;
-      e.points[idx]=[r2(np[0]),r2(np[1])];
-      touched=true;
-      const j=idx===0?1:idx-1;
-      if(j<0||j>e.points.length-1)continue;
-      const neighbourBound=(j===0&&e.from)||(j===e.points.length-1&&e.to);
-      if(neighbourBound)continue;          // это чужой привязанный конец
-      const q=e.points[j];
-      if(Math.abs(q[0]-old[0])<1.2)q[0]=r2(q[0]+dx);
-      if(Math.abs(q[1]-old[1])<1.2)q[1]=r2(q[1]+dy);
-    }
-    if(touched){fixEnd(e,true);fixEnd(e,false);simplify(e);}
+/* Запасной путь, когда libavoid недоступен: конец линии переезжает к новой
+   точке, соседний узел подтягивается следом, если стоял с ним на одной
+   прямой (и если это не чужой привязанный конец), а подход к блоку
+   выправляется по нормали. */
+function followEnd(e,idx,np){
+  const old=e.points[idx].slice();
+  const dx=np[0]-old[0], dy=np[1]-old[1];
+  if(!dx&&!dy)return;
+  e.points[idx]=[r2(np[0]),r2(np[1])];
+  const j=idx===0?1:idx-1;
+  if(j<0||j>e.points.length-1)return;
+  if((j===0&&e.from)||(j===e.points.length-1&&e.to))return;
+  const q=e.points[j];
+  if(Math.abs(q[0]-old[0])<1.2)q[0]=r2(q[0]+dx);
+  if(Math.abs(q[1]-old[1])<1.2)q[1]=r2(q[1]+dy);
+}
+function followShapes(m,e){
+  for(const idx of [0,e.points.length-1]){
+    const ref=idx===0?e.from:e.to; if(!ref)continue;
+    const np=anchorPt(m,ref); if(np)followEnd(e,idx,np);
   }
+  fixEnd(e,true);fixEnd(e,false);simplify(e);
+}
+
+/* ---------- геометрия линий ---------- */
+function nearestOn(pts,p){
+  let best=null;
+  for(let i=0;i+1<pts.length;i++){
+    const a=pts[i],b=pts[i+1],dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;
+    const t=L?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L)):0;
+    const q=[a[0]+t*dx,a[1]+t*dy], d=Math.hypot(p[0]-q[0],p[1]-q[1]);
+    if(!best||d<best.d)best={d,p:[r2(q[0]),r2(q[1])]};
+  }
+  return best;
+}
+const onLine=(pts,p)=>{const r=nearestOn(pts,p);return !!r&&r.d<.8;};
+function freeEnds(e){
+  const last=e.points.length-1, out=[];
+  if(!e.from)out.push(0);
+  if(!e.to&&last>0)out.push(last);
+  return out;
+}
+/* пересекает ли ломаная блок (отрезок против прямоугольника, Лианг — Барски) */
+function crosses(pts,s){
+  const x0=s.x+1,y0=s.y+1,x1=s.x+s.w-1,y1=s.y+s.h-1;
+  for(let i=0;i+1<pts.length;i++){
+    const a=pts[i],b=pts[i+1],dx=b[0]-a[0],dy=b[1]-a[1];
+    let t0=0,t1=1,ok=true;
+    for(const[p,q]of[[-dx,a[0]-x0],[dx,x1-a[0]],[-dy,a[1]-y0],[dy,y1-a[1]]]){
+      if(Math.abs(p)<1e-9){if(q<0){ok=false;break;}continue;}
+      const r=q/p;
+      if(p<0){if(r>t1){ok=false;break;}if(r>t0)t0=r;}
+      else{if(r<t0){ok=false;break;}if(r<t1)t1=r;}
+    }
+    if(ok&&t0<=t1)return true;
+  }
+  return false;
+}
+/* Раскладка рисует одну связь несколькими кусками: «шина» ветвления, стык
+   в точке на другой линии. Такие куски, соединённые свободными концами,
+   образуют одну конструкцию. */
+function edgeGroups(m){
+  const E=m.edges, par=E.map((_,i)=>i);
+  const f=i=>par[i]===i?i:(par[i]=f(par[i]));
+  E.forEach((b,i)=>{for(const idx of freeEnds(b)){const p=b.points[idx];
+    E.forEach((a,j)=>{if(i!==j&&onLine(a.points,p))par[f(i)]=f(j);});}});
+  const g=new Map();
+  E.forEach((e,i)=>{const k=f(i);if(!g.has(k))g.set(k,[]);g.get(k).push(e);});
+  return [...g.values()];
+}
+/* свободные концы других линий, лежащие на перекладываемых */
+function junctions(m,list){
+  const out=[];
+  for(const b of m.edges)for(const idx of freeEnds(b)){
+    const host=list.find(a=>a!==b&&onLine(a.points,b.points[idx]));
+    if(host)out.push({edge:b,idx,host});
+  }
+  return out;
+}
+function portAt(s,p){
+  const A=anchors(s);let best='bottom',bd=Infinity;
+  for(const port of PORTS){const d=Math.hypot(A[port][0]-p[0],A[port][1]-p[1]);
+    if(d<bd){bd=d;best=port;}}
+  return best;
+}
+
+/* ---------- трассировка: libavoid ----------
+   Маршруты считает libavoid из Adaptagrams — тот же трассировщик, что в
+   Inkscape: ортогональные линии обходят блоки, выходят и входят строго по
+   нормали к стороне, а идущие рядом расходятся на равный шаг. Библиотека
+   собрана в WebAssembly (vendor/web/libavoid) и встроена в страницу, так
+   что работает и с file://, и без сети. Если браузер её не загрузил,
+   действует простой запасной алгоритм (followShapes / autoRoute). */
+let AV=null;
+const PORTS=['top','bottom','left','right'];
+const PIN={top:[.5,0,1],bottom:[.5,1,2],left:[0,.5,4],right:[1,.5,8]};  // x, y, ConnDir
+const CLS={top:10,bottom:11,left:12,right:13,out:20,in:21};   // 1 у libavoid занят
+const AV_BUF=12, AV_SIDE=40;     // отступ от блоков; «цена» выхода вбок
+function loadRouter(){
+  if(AV||typeof AvoidModule!=='function'||typeof AVOID_WASM!=='string'||
+     typeof WebAssembly!=='object')return Promise.resolve(AV);
+  let bin;
+  try{bin=Uint8Array.from(atob(AVOID_WASM),c=>c.charCodeAt(0));}
+  catch(e){return Promise.resolve(null);}
+  return AvoidModule({print(){},printErr(){},onAbort(){AV=null;},
+    instantiateWasm(imports,done){
+      WebAssembly.instantiate(bin,imports).then(r=>done(r.instance,r.module),()=>{});
+      return {};}})
+    .then(A=>{AV=A;return A;},()=>null);
+}
+const straightOnly=pts=>pts.length>1&&pts.every((p,i)=>!i||
+  Math.abs(p[0]-pts[i-1][0])<.6||Math.abs(p[1]-pts[i-1][1])<.6);
+/* «шпилька»: линия доходит до точки и возвращается назад по той же прямой */
+function spiky(pts){
+  for(let i=1;i+1<pts.length;i++){
+    const a=pts[i-1],b=pts[i],c=pts[i+1];
+    const ux=b[0]-a[0],uy=b[1]-a[1],vx=c[0]-b[0],vy=c[1]-b[1];
+    if(Math.abs(ux*vy-uy*vx)<.5&&ux*vx+uy*vy<0)return true;
+  }
+  return false;
+}
+/* Опорные точки (checkpoints) — изломы прежнего маршрута: линия, которую
+   задел блок, обходит его рядом, а не уходит «кратчайшим» путём через всю
+   схему. Излом у сдвинутого конца и изломы позади него отбрасываются —
+   иначе линия ломалась бы назад. moved — индексы сдвинутых свободных концов. */
+function checkpoints(m,e,moved){
+  const P=e.points, last=P.length-1;
+  if(last<2)return [];
+  let lo=1, hi=last-1;
+  const guard=[null,null];
+  [[0,e.from],[last,e.to]].forEach(([idx,ref],k)=>{
+    const s=ref&&m.shapes.find(x=>x.id===ref.id);
+    let shifted=!!(moved&&moved.has(idx));
+    if(s){const a=anchors(s)[ref.port];
+      shifted=Math.hypot(a[0]-P[idx][0],a[1]-P[idx][1])>.6;
+      if(shifted)guard[k]=[a,NORMAL[ref.port]];}
+    if(shifted){if(idx===0)lo=2;else hi=last-2;}
+  });
+  const B=AV_BUF-1, out=[];
+  for(let i=lo;i<=hi;i++){
+    const p=P[i];
+    if(!m.shapes.some(s=>p[0]>s.x-B&&p[0]<s.x+s.w+B&&p[1]>s.y-B&&p[1]<s.y+s.h+B))out.push(p);
+  }
+  /* ближайшие к сдвинутому блоку точки не должны оказаться позади его стороны */
+  const behind=(p,g)=>g&&(p[0]-g[0][0])*g[1][0]+(p[1]-g[0][1])*g[1][1]<AV_BUF;
+  while(out.length&&behind(out[0],guard[0]))out.shift();
+  while(out.length&&behind(out[out.length-1],guard[1]))out.pop();
+  return out;
+}
+/* reqs: [{from,to,a,b}], from/to — {id,cls} или null (тогда конец — точка a/b).
+   Возвращает маршруты; null там, где libavoid пути не нашёл. */
+function avRoute(m,reqs,buf){
+  const A=AV, P=A.RoutingParameter, tmp=[], T=o=>(tmp.push(o),o);
+  const multi=reqs.some(q=>[q.from,q.to].some(r=>r&&(r.cls===CLS.out||r.cls===CLS.in)));
+  const R=new A.Router(A.RouterFlag.OrthogonalRouting.value);
+  try{
+    R.setRoutingParameter(P.shapeBufferDistance,buf||AV_BUF);
+    R.setRoutingParameter(P.idealNudgingDistance,10);
+    R.setRoutingParameter(P.segmentPenalty,50);
+    /* в блок-схеме линии сходятся в середину стороны (вход цикла и
+       обратная связь), поэтому концы у блоков не раздвигаются */
+    R.setRoutingOption(A.RoutingOption.nudgeOrthogonalSegmentsConnectedToShapes,false);
+    const refs={};
+    for(const s of m.shapes){
+      const ref=new A.ShapeRef(R,T(new A.Rectangle(T(new A.Point(s.x,s.y)),
+                                                   T(new A.Point(s.x+s.w,s.y+s.h)))));
+      for(const port of PORTS){
+        const[px,py,dir]=PIN[port];
+        const pin=(cls,cost)=>{const p=new A.ShapeConnectionPin(ref,cls,px,py,true,0,dir);
+          p.setExclusive(false); if(cost)p.setConnectionCost(cost);};
+        pin(CLS[port],0);
+        if(!multi)continue;
+        if(port!=='top')pin(CLS.out,port==='bottom'?0:AV_SIDE);
+        if(port!=='bottom')pin(CLS.in,port==='top'?0:AV_SIDE);
+      }
+      refs[s.id]=ref;
+    }
+    const end=(r,p)=>r&&refs[r.id]?T(new A.ConnEnd(refs[r.id],r.cls))
+                                  :T(new A.ConnEnd(T(new A.Point(p[0],p[1]))));
+    const conns=reqs.map(q=>{const c=new A.ConnRef(R,end(q.from,q.a),end(q.to,q.b));
+      c.setRoutingType(A.ConnType.ConnType_Orthogonal);
+      if(q.cps&&q.cps.length){
+        const v=T(new A.CheckpointVector());
+        for(const p of q.cps)v.push_back(T(new A.Checkpoint(T(new A.Point(p[0],p[1])))));
+        c.setRoutingCheckpoints(v);
+      }
+      return c;});
+    R.processTransaction();
+    /* конец маршрута обязан стоять на точке привязки блока или на своей точке */
+    const S=id=>m.shapes.find(s=>s.id===id);
+    const near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1])<.6;
+    const lands=(r,q,p)=>r&&refs[r.id]?Object.values(anchors(S(r.id))).some(a=>near(a,p))
+                                      :near(q,p);
+    return conns.map((c,i)=>{
+      const r=T(c.displayRoute()),pts=[];
+      for(let k=0;k<r.size();k++){const p=T(r.at(k));pts.push([r2(p.x),r2(p.y)]);}
+      const cl=cleanPts(pts), q=reqs[i];
+      return c.hasValidRoute()&&straightOnly(cl)&&!spiky(cl)&&lands(q.from,q.a,cl[0])&&
+             lands(q.to,q.b,cl[cl.length-1])?cl:null;});
+  }finally{
+    for(const o of tmp)try{o.delete();}catch(e){}
+    R.delete();
+  }
+}
+function avRun(m,reqs,buf){
+  if(!AV||!reqs.length)return null;
+  try{return avRoute(m,reqs,buf);}catch(e){AV=null;return null;}   // сломался — дальше без него
+}
+/* концы линии для трассировщика.
+   mode: 'keep' — те же стороны блоков; 'free' — сторону выбирает libavoid
+   (выход снизу или вбок, вход сверху или вбок; у ромба стороны значат
+   «Да»/«Нет» и не меняются); 'guess' — стороны по простой эвристике. */
+function endsOf(m,e,mode){
+  const P=e.points, S=id=>m.shapes.find(s=>s.id===id);
+  let fp=e.from&&e.from.port, tp=e.to&&e.to.port;
+  if(mode==='guess'&&e.from&&e.to&&S(e.from.id)&&S(e.to.id)){
+    const r=autoRoute(m,S(e.from.id),S(e.to.id));
+    if(S(e.from.id).kind!=='decision')fp=r.from;
+    tp=r.to;
+  }
+  const ref=(r,port,dflt)=>{
+    if(!r||!S(r.id))return null;
+    if(mode==='free')return{id:r.id,cls:dflt&&S(r.id).kind!=='decision'?dflt:CLS[port]};
+    return{id:r.id,cls:CLS[port]};
+  };
+  return{from:ref(e.from,fp,CLS.out),to:ref(e.to,tp,CLS.in),a:P[0],b:P[P.length-1]};
+}
+/* Отступ линий от блоков. Если блок придвинут к соседу теснее двух
+   отступов, линия между ними не пролезла бы и ушла в большой обход —
+   тогда отступ уменьшается до половины зазора. */
+function bufferFor(m,list){
+  const ids=new Set(list.flatMap(e=>[e.from,e.to]).filter(Boolean).map(r=>r.id));
+  let gap=Infinity;
+  for(const a of m.shapes){
+    if(!ids.has(a.id))continue;
+    for(const b of m.shapes){
+      if(b===a)continue;
+      const dx=Math.max(b.x-a.x-a.w,a.x-b.x-b.w), dy=Math.max(b.y-a.y-a.h,a.y-b.y-b.h);
+      const d=Math.max(dx,dy);             // зазор между прямоугольниками
+      if(d>=0)gap=Math.min(gap,d);
+    }
+  }
+  return Math.max(3,Math.min(AV_BUF,Math.floor(gap/2)-1));
+}
+/* Прокладывает линии заново.
+   opt.free  — разрешить смену сторон (кнопка «Проложить заново», новая
+               связь); иначе стороны блоков сохраняются;
+   opt.fresh — линия новая: к ней ещё ничего не примыкает;
+   opt.moved — Map(линия -> индексы свободных концов, которые сдвинулись). */
+function routeEdges(m,list,opt){
+  opt=opt||{};
+  const free=!!opt.free, depth=opt.depth||0, moved=opt.moved;
+  list=list.filter(e=>e.points.length>1);
+  if(!list.length)return;
+  const glue=opt.fresh?[]:junctions(m,list);
+  const buf=bufferFor(m,list);
+  const reqs=list.map(e=>endsOf(m,e,free?'free':'keep'));
+  if(!free)reqs.forEach((q,i)=>{q.cps=checkpoints(m,list[i],moved&&moved.get(list[i]));});
+  const res=avRun(m,reqs,buf)||[];
+  /* где не вышло — ещё попытки: без опорных точек (при свободном выборе —
+     со сторонами по эвристике: libavoid порой спотыкается на нём), затем
+     с малым отступом — когда блоки стоят почти вплотную */
+  const retry=pad=>{
+    const bad=list.map((e,i)=>res[i]?-1:i).filter(i=>i>=0);
+    if(!AV||!bad.length)return;
+    const again=avRun(m,bad.map(i=>free?endsOf(m,list[i],'guess')
+                                       :Object.assign({},reqs[i],{cps:[]})),pad)||[];
+    bad.forEach((i,k)=>{res[i]=again[k]||null;});
+  };
+  retry(buf); retry(Math.min(4,buf));
+  list.forEach((e,i)=>{
+    const pts=res[i];
+    if(pts){
+      e.points=pts;
+      const S=id=>m.shapes.find(s=>s.id===id);
+      if(e.from&&S(e.from.id))e.from.port=portAt(S(e.from.id),pts[0]);
+      if(e.to&&S(e.to.id))e.to.port=portAt(S(e.to.id),pts[pts.length-1]);
+    }else if(free&&e.from&&e.to)legacyReroute(m,e);
+    else followShapes(m,e);
+  });
+  /* примыкавшие линии дотягиваются до нового хода — стык не отрывается
+     (если он не лежит и на какой-то другой линии: тогда держится за неё) */
+  const again=new Map();
+  for(const g of glue){
+    const p=g.edge.points[g.idx];
+    if(m.edges.some(a=>a!==g.edge&&onLine(a.points,p)))continue;
+    const q=nearestOn(g.host.points,p); if(!q)continue;
+    if(AV)g.edge.points[g.idx]=q.p; else followEnd(g.edge,g.idx,q.p);
+    if(!again.has(g.edge))again.set(g.edge,new Set());
+    again.get(g.edge).add(g.idx);
+  }
+  if(again.size&&depth<3){
+    if(AV)routeEdges(m,[...again.keys()],{depth:depth+1,moved:again});
+    else again.forEach((_,e)=>simplify(e));
+  }
+}
+function legacyReroute(m,e){
+  const a=m.shapes.find(s=>s.id===e.from.id), b=m.shapes.find(s=>s.id===e.to.id);
+  if(!a||!b)return false;
+  const r=autoRoute(m,a,b);
+  e.points=r.pts.map(p=>[r2(p[0]),r2(p[1])]);
+  e.from={id:a.id,port:r.from}; e.to={id:b.id,port:r.to};
+  return true;
+}
+/* Блоки shapeIds сдвинулись или изменили размер — линии следуют за ними.
+   opt.delta — общий сдвиг: конструкция, все блоки которой едут вместе,
+   просто переносится, а не перекладывается. opt.skip — линии, которые
+   уже сдвинуты вручную. */
+function syncEdges(m,shapeIds,opt){
+  opt=opt||{};
+  const ids=new Set(shapeIds), skip=new Set(opt.skip||[]);
   /* подписи «Да»/«Нет» приклеены к вершинам блока и едут вместе с ним */
   for(const l of m.labels){
     if(!l.near||!ids.has(l.near.id))continue;
@@ -571,15 +860,27 @@ function syncEdges(m,shapeIds){
     const a=anchors(s)[l.near.port]; if(!a)continue;
     l.x=r2(a[0]+l.near.ox); l.y=r2(a[1]+l.near.oy);
   }
+  if(!ids.size)return;
+  const d=opt.delta;
+  if(d&&(d[0]||d[1]))for(const g of edgeGroups(m)){
+    const refs=g.flatMap(e=>[e.from,e.to]).filter(Boolean);
+    if(!refs.length||!refs.every(r=>ids.has(r.id)))continue;
+    for(const e of g){
+      if(!skip.has(e.id))e.points=e.points.map(p=>[r2(p[0]+d[0]),r2(p[1]+d[1])]);
+      skip.add(e.id);
+    }
+  }
+  const moved=m.shapes.filter(s=>ids.has(s.id));
+  const list=m.edges.filter(e=>!skip.has(e.id)&&(
+    (e.from&&ids.has(e.from.id))||(e.to&&ids.has(e.to.id))||
+    moved.some(s=>crosses(e.points,s))));
+  routeEdges(m,list);
 }
-/* проложить линию заново между её блоками */
-function rerouteEdge(m,e){
+/* проложить линию заново: концы у блоков, стороны — какие удобнее */
+function rerouteEdge(m,e,fresh){
   if(!e.from||!e.to)return false;
-  const a=m.shapes.find(s=>s.id===e.from.id), b=m.shapes.find(s=>s.id===e.to.id);
-  if(!a||!b)return false;
-  const r=autoRoute(m,a,b);
-  e.points=r.pts.map(p=>[r2(p[0]),r2(p[1])]);
-  e.from={id:a.id,port:r.from}; e.to={id:b.id,port:r.to};
+  if(!m.shapes.some(s=>s.id===e.from.id)||!m.shapes.some(s=>s.id===e.to.id))return false;
+  routeEdges(m,[e],{free:true,fresh});
   return true;
 }
 function autoRoute(m,a,b){
@@ -780,8 +1081,9 @@ function onDown(ev){
     if(!pending){pending={shape:s,at:p};drawUI();return;}
     if(pending.shape.id!==s.id){
       push(); const r=autoRoute(m,pending.shape,s);
-      m.edges.push({id:uid('e'),points:r.pts.map(q=>[r2(q[0]),r2(q[1])]),arrow:true,
-        from:{id:pending.shape.id,port:r.from},to:{id:s.id,port:r.to}});
+      const e={id:uid('e'),points:r.pts.map(q=>[r2(q[0]),r2(q[1])]),arrow:true,
+        from:{id:pending.shape.id,port:r.from},to:{id:s.id,port:r.to}};
+      m.edges.push(e); rerouteEdge(m,e,true);
       commit();
     }
     pending=null; setTool('select'); drawUI(); return;
@@ -797,7 +1099,7 @@ function onDown(ev){
   }
   if(vtx){const[eid,i]=vtx.split(':'); push(); drag={type:'vtx',edge:eid,idx:+i};return;}
   if(resize){const id=[...sel.shapes][0]; push();
-    drag={type:'resize',dir:resize,id,from:p,
+    drag={type:'resize',dir:resize,id,from:p,edges:clone(m.edges),
           orig:clone(m.shapes.find(s=>s.id===id))};return;}
   const shapeEl=t.closest&&t.closest('[data-shape]');
   const edgeEl=t.closest&&t.closest('[data-edge]');
@@ -807,7 +1109,9 @@ function onDown(ev){
     if(ev.shiftKey)sel.shapes.has(id)?sel.shapes.delete(id):sel.shapes.add(id);
     else if(!sel.shapes.has(id))selectOnly('shapes',id);
     push();
-    drag={type:'move',from:p,at:p,
+    /* линии каждый раз считаются от состояния на начало перетаскивания:
+       ошибки не копятся, а вернув блок на место, получаем прежние линии */
+    drag={type:'move',from:p,at:p,lead:id,edges:clone(m.edges),
           orig:m.shapes.filter(s=>sel.shapes.has(s.id)).map(s=>({id:s.id,x:s.x,y:s.y})),
           origL:m.labels.filter(l=>sel.labels.has(l.id)).map(l=>({id:l.id,x:l.x,y:l.y}))};
     inspect(); drawUI(); return;
@@ -827,8 +1131,20 @@ function onDown(ev){
   if(!ev.shiftKey)clearSel();
   drag={type:'marquee',from:p,at:p}; inspect(); drawUI();
 }
+/* движение обрабатывается не чаще раза за кадр: на телефоне пересчёт линий
+   медленнее, и события иначе копились бы в очередь */
+let moveEv=null;
 function onMove(ev){
   if(!drag&&!pending)return;
+  const first=!moveEv;
+  moveEv={clientX:ev.clientX,clientY:ev.clientY,altKey:ev.altKey};
+  if(first)requestAnimationFrame(flushMove);
+}
+function flushMove(){
+  const ev=moveEv; moveEv=null;
+  if(ev&&(drag||pending))moveNow(ev);
+}
+function moveNow(ev){
   const m=model(), p=pt(ev);
   if(pending){pending.at=p;drawUI();return;}
   if(drag.type==='marquee'){drag.at=p;drawUI();return;}
@@ -846,17 +1162,24 @@ function onMove(ev){
                        Math.max(o.y+o.h,drag.orig[0].y+dy+s.h)+30]);break;}
       }
     }
+    /* к сетке привязывается блок под курсором, остальные едут на тот же
+       сдвиг — так группа не расползается */
+    const lead=drag.orig.find(o=>o.id===drag.lead)||drag.orig[0];
+    if(lead){dx=r2(snap(lead.x+dx,ev.altKey||guides.length>0)-lead.x);
+             dy=r2(snap(lead.y+dy,ev.altKey)-lead.y);}
     for(const o of drag.orig){const s=m.shapes.find(x=>x.id===o.id);
-      s.x=r2(snap(o.x+dx,ev.altKey)); s.y=r2(snap(o.y+dy,ev.altKey));}
+      s.x=r2(o.x+dx); s.y=r2(o.y+dy);}
     for(const o of drag.origL){const l=m.labels.find(x=>x.id===o.id);
       l.x=r2(o.x+dx); l.y=r2(o.y+dy);}
-    syncEdges(m,drag.orig.map(o=>o.id));
+    m.edges=clone(drag.edges);
+    syncEdges(m,drag.orig.map(o=>o.id),{delta:[dx,dy]});
     drag.at=p; redrawFast(); return;
   }
   if(drag.type==='resize'){
     const s=m.shapes.find(x=>x.id===drag.id), o=drag.orig;
     if(drag.dir!=='s')s.w=r2(Math.max(60,snap(o.w+(p[0]-drag.from[0]),ev.altKey)));
     if(drag.dir!=='e')s.h=r2(Math.max(34,snap(o.h+(p[1]-drag.from[1]),ev.altKey)));
+    m.edges=clone(drag.edges);
     syncEdges(m,[s.id]); redrawFast(); return;
   }
   if(drag.type==='vtx'){
@@ -868,6 +1191,7 @@ function onMove(ev){
   }
 }
 function onUp(ev){
+  flushMove();               // последнее движение до отпускания
   const m=model();
   if(drag&&drag.type==='marquee'){
     const[x0,y0]=drag.from,[x1,y1]=drag.at;
@@ -892,6 +1216,7 @@ function onUp(ev){
         }
         e.points[drag.idx]=[r2(A[best][0]),r2(A[best][1])];
         if(drag.idx===0)e.from={id:s.id,port:best}; else e.to={id:s.id,port:best};
+        routeEdges(m,[e]);     // подход к блоку — строго по нормали
       }
     }
   }
@@ -946,7 +1271,7 @@ function nudge(dx,dy){
     if(l){l.x=r2(l.x+dx);l.y=r2(l.y+dy);}}
   for(const id of sel.edges){const e=m.edges.find(x=>x.id===id);
     if(e)e.points=e.points.map(p=>[r2(p[0]+dx),r2(p[1]+dy)]);}
-  syncEdges(m,[...sel.shapes]); commit();
+  syncEdges(m,[...sel.shapes],{delta:[dx,dy],skip:[...sel.edges]}); commit();
 }
 function fitShape(id){
   const m=model(), s=m.shapes.find(x=>x.id===id); if(!s)return;
@@ -984,10 +1309,12 @@ function inspect(){
     $('#fApply').onclick=apply; $('#fKind').onchange=apply;
     $('#fText').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();apply();}};
     $('#fFit').onclick=()=>{push();fitShape(s.id);commit();};
-    $('#fReroute').onclick=()=>{push();let k=0;
-      for(const e of m.edges)
-        if((e.from&&e.from.id===s.id)||(e.to&&e.to.id===s.id))k+=rerouteEdge(m,e)?1:0;
-      commit();toast(k?t('s_rerouted',k):t('s_no_links'));};
+    $('#fReroute').onclick=()=>{push();
+      const ok=id=>m.shapes.some(x=>x.id===id);
+      const list=m.edges.filter(e=>e.from&&e.to&&ok(e.from.id)&&ok(e.to.id)&&
+        (e.from.id===s.id||e.to.id===s.id));
+      routeEdges(m,list,{free:true});     // вместе: идущие рядом линии разойдутся
+      commit();toast(list.length?t('s_rerouted',list.length):t('s_no_links'));};
     $('#fDup').onclick=dupSel; $('#fDel').onclick=delSel;
     return;
   }
@@ -1204,6 +1531,7 @@ function importProject(file){
 
 /* ---------- запуск ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
+  loadRouter();              // в фоне: до загрузки линии ведёт запасной алгоритм
   loadStore();
   applyTheme();
   applyLang();
@@ -1305,6 +1633,25 @@ def _palette():
     return "".join(out)
 
 
+def _router_scripts():
+    """libavoid из vendor/web, встроенный прямо в страницу.
+
+    WebAssembly кладётся строкой base64: fetch() со страницы, открытой как
+    file://, браузеры запрещают, а так альбом остаётся одним файлом, который
+    работает офлайн где угодно. Нет файлов — редактор обойдётся без них.
+    """
+    js_path = web_asset("libavoid", "libavoid.js")
+    wasm_path = web_asset("libavoid", "libavoid.wasm")
+    if not (js_path and wasm_path):
+        return ""
+    with open(js_path, encoding="utf-8") as fh:
+        js = fh.read().replace("</", "<\\/")
+    with open(wasm_path, "rb") as fh:
+        wasm = base64.b64encode(fh.read()).decode("ascii")
+    return (f"<script>{js}</script>\n"
+            f'<script>const AVOID_WASM="{wasm}";</script>\n')
+
+
 def render_html(entries, title="Блок-схемы", folder="", lang="ru", theme="light"):
     """entries: список dict(rel, name, signature, line, anchor, model)."""
     payload = json.dumps({"folder": folder or title, "items": entries,
@@ -1392,6 +1739,6 @@ def render_html(entries, title="Блок-схемы", folder="", lang="ru", them
 </div>
 <div class="toast" id="toast"></div>
 <script>const DATA={payload};</script>
-<script>{JS_CORE}{JS_APP}</script>
+{_router_scripts()}<script>{JS_CORE}{JS_APP}</script>
 </body></html>
 """

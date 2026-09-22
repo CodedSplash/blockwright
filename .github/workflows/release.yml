@@ -59,6 +59,7 @@ jobs:
           "${{ matrix.built }}" examples -o smoke --no-ui
           test -f smoke/index.html
           test -f smoke/grades__main.svg
+          grep -q "AVOID_WASM" smoke/index.html
           echo "binary works: $("${{ matrix.built }}" --version)"
 
       - name: Name the asset
