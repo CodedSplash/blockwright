@@ -3,12 +3,21 @@
 В репозитории рядом лежат готовые сборки парсеров для разных платформ и
 версий CPython. Если в системе их нет, точка входа подключает подходящую
 папку к sys.path — и утилита работает сразу после копирования, без pip.
+
+Исключение — Termux на Android: там своя libc, колёс на PyPI для неё нет,
+поэтому парсеры собираются на месте (см. tools/install-termux.sh).
 """
 
 import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def is_termux():
+    """Termux на Android: свой префикс и libc, готовых колёс для него нет."""
+    return ("com.termux" in os.environ.get("PREFIX", "")
+            or os.path.isdir("/data/data/com.termux/files/usr"))
 
 
 def platform_tag():
@@ -18,6 +27,8 @@ def platform_tag():
     if sys.platform.startswith("win"):
         return "win_amd64" if sys.maxsize > 2 ** 32 else "win32"
     if sys.platform.startswith("linux"):
+        if is_termux():
+            return "android_" + (arch or "unknown")
         if arch in ("x86_64", "amd64"):
             return "linux_x86_64"
         return "linux_" + (arch or "unknown")
@@ -55,10 +66,16 @@ def activate(root=None):
 
 
 def install_hint():
-    return (
-        "Не найдены парсеры tree-sitter.\n"
-        f"Python {sys.version.split()[0]}, платформа {platform_tag()}.\n"
-        "В комплекте есть сборки для CPython 3.10–3.14: Windows x64 и Linux x86-64.\n"
-        "Для другой платформы выполните один раз:\n"
-        f"    {os.path.basename(sys.executable)} -m pip install -r "
-        f"{os.path.join(ROOT, 'requirements.txt')}\n")
+    """Понятное объяснение, что делать, если парсеров нет."""
+    req = os.path.join(ROOT, "requirements.txt")
+    head = ("Не найдены парсеры tree-sitter.\n"
+            f"Python {sys.version.split()[0]}, платформа {platform_tag()}.\n")
+    if is_termux():
+        return head + ("Termux собирает парсеры сам — нужен компилятор:\n"
+                       "    pkg install python clang\n"
+                       f"    pip install -r {req}\n"
+                       "Либо разом: sh tools/install-termux.sh\n")
+    return head + ("В комплекте есть сборки для CPython 3.10–3.14: "
+                   "Windows x64 и Linux x86-64.\n"
+                   "Для другой платформы выполните один раз:\n"
+                   f"    {os.path.basename(sys.executable)} -m pip install -r {req}\n")

@@ -20,9 +20,16 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PYTHONS = ["3.10", "3.11", "3.12", "3.13", "3.14"]
+# По умолчанию собираются только две ходовые платформы — иначе папка
+# vendor/ разрастается. ARM-сборки берутся из релиза или ставятся через pip.
 TARGETS = {
     "win_amd64": "win_amd64",
     "linux_x86_64": "manylinux2014_x86_64",
+}
+OPTIONAL = {
+    "linux_aarch64": "manylinux2014_aarch64",
+    "macos_arm64": "macosx_11_0_arm64",
+    "macos_x86_64": "macosx_10_9_x86_64",
 }
 GRAMMARS = {"tree_sitter_c": "tree_sitter_c", "tree_sitter_cpp": "tree_sitter_cpp"}
 
@@ -70,9 +77,13 @@ def build(platform_name, pip_tag):
 
 def main():
     ap = argparse.ArgumentParser(description="Пересборка папки vendor")
-    ap.add_argument("--only", choices=sorted(TARGETS), help="только одна платформа")
+    ap.add_argument("--only", choices=sorted({**TARGETS, **OPTIONAL}),
+                    help="только одна платформа (в том числе необязательная)")
     args = ap.parse_args()
-    for name, tag in TARGETS.items():
+    targets = dict(TARGETS)
+    if args.only and args.only in OPTIONAL:
+        targets = {args.only: OPTIONAL[args.only]}
+    for name, tag in targets.items():
         if args.only and args.only != name:
             continue
         print(f"Собираю {name} …")

@@ -5,12 +5,15 @@ import fnmatch
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import webbrowser
 from dataclasses import dataclass
 
 from . import __version__
 from . import parse as P
+from . import vendored
 from . import png as PNG
 from .album import render_html
 from .build import Builder
@@ -43,6 +46,27 @@ CHART_WORDS = {
 
 
 _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def open_in_browser(path):
+    """Открывает готовый альбом: на Android — через termux-open."""
+    full = os.path.abspath(path)
+    if vendored.is_termux():
+        opener = shutil.which("termux-open")
+        if opener:
+            try:
+                subprocess.run([opener, "--content-type", "text/html", full],
+                               check=False, timeout=20)
+                return True
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        print(f"Откройте в браузере: {full}")
+        return False
+    try:
+        return webbrowser.open("file:///" + full.replace("\\", "/"))
+    except Exception:  # noqa: BLE001
+        print(f"Откройте в браузере: {full}")
+        return False
 
 
 def rel_path(path, base):
@@ -351,7 +375,7 @@ def main(argv=None):
     if index:
         log(f"Альбом схем: {index}")
         if args.open:
-            webbrowser.open("file:///" + os.path.abspath(index).replace("\\", "/"))
+            open_in_browser(index)
     if from_ui:
         from . import tui
         tui.pause("Альбом открыт в браузере. Нажмите любую клавишу, чтобы закрыть…")
