@@ -22,7 +22,8 @@ Vector SVG for your report — and a real diagram editor in the browser.
 <a href="#-command-line">CLI</a> ·
 <a href="#-the-editor">Editor</a> ·
 <a href="#-how-code-becomes-a-chart">Block mapping</a> ·
-<a href="#-standalone-executable">Binary</a>
+<a href="#-standalone-executable">Binary</a> ·
+<a href="#-android">Android</a>
 
 <br>
 
@@ -203,18 +204,60 @@ page and the browser redraws it with the same algorithm the Python side uses.
 
 ## 📦 Standalone executable
 
+Every [release](https://github.com/CodedSplash/blockwright/releases/latest)
+carries ready binaries built by CI — Python is already inside, just download
+and run:
+
+| File | Platform |
+|------|----------|
+| `blockwright-windows-x64.exe` | Windows 10/11, 64-bit |
+| `blockwright-linux-x86_64` | Linux, glibc 2.35+ (Ubuntu 22.04 and newer) |
+| `blockwright-linux-aarch64` | ARM64 Linux — Raspberry Pi, ARM servers, `proot-distro` on Android |
+
+Building it yourself takes two commands:
+
 ```bash
 pip install pyinstaller
-python build.py
+python build.py          # -> dist/blockwright[.exe]
 ```
 
-Produces `dist/blockwright.exe` (Windows, ~9 MB) or `dist/blockwright` (Linux)
-with Python and the parsers inside — copy it anywhere and run.
-
 > [!IMPORTANT]
-> Build on the system you are targeting: an `.exe` on Windows, a Linux binary on
-> Linux (WSL works). A ready Windows build is attached to every
-> [release](https://github.com/CodedSplash/blockwright/releases/latest).
+> A build runs only on the system it was made for, so build on the target
+> platform (WSL is enough for a Linux binary). The release workflow does all
+> three in parallel on GitHub runners.
+
+---
+
+## 📱 Android
+
+Charts can be built right on a phone through
+[Termux](https://termux.dev) — the terminal picker and the browser editor both
+work, and the editor is usable with a finger: drag blocks, edit text, export
+PNG straight to the gallery.
+
+```bash
+pkg install git
+git clone https://github.com/CodedSplash/blockwright
+sh blockwright/tools/install-termux.sh
+```
+
+The script installs Python and clang, **builds the tree-sitter parsers from
+source** (there are no prebuilt wheels for Android) and creates a `blockwright`
+command. After `termux-setup-storage` the phone's files appear under
+`~/storage/shared`, so a project downloaded to the phone can be turned into
+charts:
+
+```bash
+blockwright ~/storage/shared/Download/lab1
+```
+
+> [!TIP]
+> Even without Termux an Android phone is enough to *edit* charts: generate
+> `index.html` on a computer, copy it over and open it in the browser — the
+> whole editor lives inside that single file.
+
+The `blockwright-linux-aarch64` binary from the releases page also runs on
+Android inside `proot-distro` (Ubuntu), if you prefer not to compile anything.
 
 ---
 
@@ -248,6 +291,7 @@ blockwright/
 └── text.py         text wrapping and measurement
 tools/
 ├── vendor.py             rebuild the bundled parsers
+├── install-termux.sh     one-shot setup for Android/Termux
 └── screenshot_picker.py  render the picker screenshot for the docs
 build.py            single-file build
 ```

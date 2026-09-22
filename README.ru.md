@@ -22,7 +22,8 @@
 <a href="#-командная-строка">Командная строка</a> ·
 <a href="#-редактор">Редактор</a> ·
 <a href="#-как-код-превращается-в-схему">Соответствие блоков</a> ·
-<a href="#-отдельный-исполняемый-файл">Сборка</a>
+<a href="#-отдельный-исполняемый-файл">Сборка</a> ·
+<a href="#-android">Android</a>
 
 <br>
 
@@ -204,19 +205,58 @@ python -m blockwright . --list                     # что нашлось, бе
 
 ## 📦 Отдельный исполняемый файл
 
+К каждому [релизу](https://github.com/CodedSplash/blockwright/releases/latest)
+CI прикладывает готовые сборки — Python уже внутри, достаточно скачать:
+
+| Файл | Система |
+|------|---------|
+| `blockwright-windows-x64.exe` | Windows 10/11, 64 бита |
+| `blockwright-linux-x86_64` | Linux, glibc 2.35+ (Ubuntu 22.04 и новее) |
+| `blockwright-linux-aarch64` | ARM64 Linux — Raspberry Pi, ARM-серверы, `proot-distro` на Android |
+
+Собрать самому — две команды:
+
 ```bash
 pip install pyinstaller
-python build.py
+python build.py          # -> dist/blockwright[.exe]
 ```
 
-Получится `dist/blockwright.exe` (Windows, ~9 МБ) или `dist/blockwright`
-(Linux) — с Python и парсерами внутри, копируется куда угодно.
-
 > [!IMPORTANT]
-> Собирать нужно на той системе, для которой делается сборка: `.exe` — в
-> Windows, бинарник Linux — в Linux (подойдёт и WSL). Готовая сборка для
-> Windows приложена к каждому
-> [релизу](https://github.com/CodedSplash/blockwright/releases/latest).
+> Сборка работает только на той системе, для которой сделана, поэтому собирать
+> нужно на целевой платформе (для Linux подойдёт WSL). Релизный workflow делает
+> все три параллельно на раннерах GitHub.
+
+---
+
+## 📱 Android
+
+Схемы можно строить прямо на телефоне — через
+[Termux](https://termux.dev). Работает и выбор в консоли, и редактор в
+браузере: блоки перетаскиваются пальцем, текст правится, PNG сохраняется в
+галерею.
+
+```bash
+pkg install git
+git clone https://github.com/CodedSplash/blockwright
+sh blockwright/tools/install-termux.sh
+```
+
+Скрипт ставит Python и clang, **собирает парсеры tree-sitter из исходников**
+(готовых колёс под Android нет) и создаёт команду `blockwright`. После
+`termux-setup-storage` файлы телефона видны в `~/storage/shared`, так что
+скачанный на телефон проект превращается в схемы одной командой:
+
+```bash
+blockwright ~/storage/shared/Download/lab1
+```
+
+> [!TIP]
+> Даже без Termux телефон годится, чтобы *править* схемы: соберите
+> `index.html` на компьютере, скопируйте на телефон и откройте в браузере —
+> весь редактор лежит внутри этого одного файла.
+
+Бинарник `blockwright-linux-aarch64` со страницы релизов тоже запускается на
+Android внутри `proot-distro` (Ubuntu), если ничего компилировать не хочется.
 
 ---
 
@@ -250,6 +290,7 @@ blockwright/
 └── text.py         перенос и измерение текста
 tools/
 ├── vendor.py             пересборка папки с парсерами
+├── install-termux.sh     установка на Android (Termux) одной командой
 └── screenshot_picker.py  скриншот консольного выбора для документации
 build.py            сборка одного исполняемого файла
 ```

@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-09-22
+
+### Added
+
+- **Binaries built by CI.** Tagging a release now builds `blockwright` on
+  three targets in parallel — Windows x64, Linux x86-64 (glibc 2.35+) and
+  Linux ARM64 — and attaches them to the GitHub release.
+- **Android support through Termux.** `tools/install-termux.sh` installs
+  Python and clang, compiles the tree-sitter parsers from source (no wheels
+  exist for Android) and registers a `blockwright` command. The album opens
+  through `termux-open`, and the editor works with touch.
+- Every push also builds the single-file binary on Windows and Linux and runs
+  it against the bundled example, so a broken build is caught immediately.
+
+### Changed
+
+- `tools/vendor.py` can fetch optional platforms on demand
+  (`--only linux_aarch64`, `--only macos_arm64`) without bloating the repo.
+
 ## [1.1.0] — 2026-09-20
 
 ### Added
@@ -59,5 +78,6 @@ First public release.
   3.10–3.14) ship with the repository, so no installation is required.
 - **Single-file build** via PyInstaller for Windows and Linux.
 
+[1.2.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.2.0
 [1.1.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.0.0
