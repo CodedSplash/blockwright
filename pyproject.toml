@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blockwright"
-version = "1.3.0"
-description = "Блок-схемы по исходному коду C и C++ в нотации ГОСТ 19.701-90"
+version = "1.4.0"
+description = "GOST 19.701-90 flowcharts from C and C++ source code"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

@@ -1,10 +1,7 @@
-"""blockwright — блок-схемы по исходному коду C и C++.
+"""blockwright: GOST 19.701-90 flowcharts from C and C++ source code.
 
-Исходники разбираются настоящими парсерами tree-sitter (tree_sitter_c,
-tree_sitter_cpp), поэтому утилита понимает реальный синтаксис языка,
-а не приближённые регулярные выражения. По каждой функции строится
-блок-схема в нотации ГОСТ 19.701-90: векторный SVG для отчёта и
-альбом-редактор в браузере, где схему можно доработать руками.
+Sources are parsed with tree-sitter; every function becomes an SVG chart and
+an entry in a browser-based album that doubles as a diagram editor.
 """
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"

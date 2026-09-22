@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-09-22
+
+### Changed
+
+- **The editor works on phones down to 320 px.** Export and settings move
+  behind a ⋯ menu instead of pushing the top bar off the screen; the
+  properties panel rises from the bottom when a block is tapped (and sits at
+  the side in landscape) instead of disappearing below 820 px; a charts list
+  drawer and the menu close with a tap outside. The page uses the dynamic
+  viewport height, so the browser's address bar no longer hides the bottom of
+  the canvas, and respects the notch safe areas.
+- **Touch gestures.** Dragging an empty part of the canvas scrolls it and two
+  fingers pinch-zoom around their midpoint; handles and connector hit areas
+  are larger on touch screens. On a narrow screen every chart opens fitted to
+  the width and centred.
+- Zooming only rescales the drawing instead of rebuilding it, and a drag
+  redraws the scene with one parse per frame instead of two.
+- Code comments are in English and trimmed to the ones that explain something.
+
+### Added
+
+- `THIRD-PARTY-NOTICES.md` lists every bundled component with its license;
+  release binaries now ship with it and with `LICENSE`.
+
 ## [1.3.0] — 2026-09-22
 
 ### Changed
@@ -108,6 +132,7 @@ First public release.
   3.10–3.14) ship with the repository, so no installation is required.
 - **Single-file build** via PyInstaller for Windows and Linux.
 
+[1.4.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.4.0
 [1.3.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.3.0
 [1.2.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.2.0
 [1.1.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.1.0

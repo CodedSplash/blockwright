@@ -170,6 +170,10 @@ page and the browser redraws it with the same algorithm the Python side uses.
   the exported SVG/PNG carries a heading.
 - **Project…** exports every edit and custom chart as one `.json`; **Open**
   loads it back. Edits live in the browser and never touch your files.
+- **Phones and tablets**, down to 320 px wide: the chart list slides in from
+  ☰, export and settings sit behind ⋯, and the properties panel rises from the
+  bottom when you tap a block (it moves to the side in landscape). Drag an
+  empty spot to scroll, pinch to zoom; charts open fitted to the screen.
 
 ---
 
@@ -236,8 +240,9 @@ python build.py          # -> dist/blockwright[.exe]
 
 Charts can be built right on a phone through
 [Termux](https://termux.dev) — the terminal picker and the browser editor both
-work, and the editor is usable with a finger: drag blocks, edit text, export
-PNG straight to the gallery.
+work, and the editor is built for a finger: tap a block to edit it in the
+panel that slides up, drag to move, pinch to zoom, export PNG straight to the
+gallery.
 
 ```bash
 pkg install git
@@ -324,4 +329,6 @@ built for the browser by [libavoid-js](https://github.com/Aksem/libavoid-js).
 under `vendor/` belong to the tree-sitter project and are redistributed under the
 same license. `vendor/web/libavoid` is libavoid-js, distributed under
 [LGPL-2.1-or-later](vendor/web/libavoid/LICENSE) as a separate, unmodified
-WebAssembly module; `python tools/vendor.py --web` fetches it again.
+WebAssembly module; `python tools/vendor.py --web` fetches it again. Every
+bundled component and its license text is listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
