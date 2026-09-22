@@ -21,6 +21,13 @@ import sys
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 
+# консоль Windows бывает в cp1252/cp866 — иначе русский текст роняет сборку
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 from blockwright.vendored import paths as vendor_paths  # noqa: E402
 from blockwright.vendored import platform_tag  # noqa: E402
 
