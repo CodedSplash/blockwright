@@ -1,12 +1,11 @@
-"""Отрисовка размеченной схемы в SVG.
+"""Rendering a laid-out chart to SVG.
 
-SVG намеренно сделан «дружественным к редакторам»:
+The output is meant to import cleanly into vector editors:
 
-* стрелки рисуются настоящими треугольниками, а не marker-ами — Figma,
-  Illustrator и Inkscape импортируют их без потерь;
-* фигуры разложены по именованным группам (`id`), поэтому в Figma схема
-  открывается аккуратным деревом слоёв, а не мешаниной из сотни путей;
-* никаких внешних ресурсов, CSS-переменных и шрифтов — только геометрия.
+* arrowheads are real polygons rather than markers, which Figma,
+  Illustrator and Inkscape all keep;
+* shapes live in named groups, so Figma shows a tidy layer tree;
+* no external resources or CSS variables, just geometry.
 """
 
 import math
@@ -43,7 +42,7 @@ THEMES = {
     },
 }
 
-# текущая палитра; меняется через use_theme()
+# the active palette, switched by use_theme()
 STROKE = THEMES["light"]["stroke"]
 LINE = STROKE
 TEXT = THEMES["light"]["text"]
@@ -52,7 +51,6 @@ FILL = dict(THEMES["light"]["fill"])
 
 
 def use_theme(name):
-    """Переключает палитру отрисовки на светлую или тёмную."""
     global STROKE, LINE, TEXT, BACKGROUND, FILL
     theme = THEMES.get(name) or THEMES["light"]
     STROKE = LINE = theme["stroke"]
@@ -91,16 +89,15 @@ def slug(text, limit=28):
 
 
 def number_shapes(frame):
-    """Нумерует фигуры сверху вниз и даёт им имена слоёв."""
+    """Number shapes top to bottom and give them layer names."""
     for i, s in enumerate(sorted(frame.shapes, key=lambda s: (s["y"], s["x"])), 1):
         s["n"] = i
         s["id"] = f"{i:02d}_{KIND_RU.get(s['kind'], 'Блок')}_{slug(s.get('text', ''))}"
     return frame
 
 
-# ------------------------------------------------------------------ фигуры
+# ------------------------------------------------------------------ shapes
 def shape_outline(s):
-    """Контур фигуры в виде готового SVG-элемента (без текста)."""
     x, y, w, h = s["x"], s["y"], s["w"], s["h"]
     k = s["kind"]
     fill = FILL.get(k, BACKGROUND)
@@ -148,7 +145,7 @@ def _shape_group(s):
     return (f'<g id="{gid}">\n  ' + "\n  ".join(body) + "\n</g>")
 
 
-# ------------------------------------------------------------------- линии
+# ------------------------------------------------------------------- edges
 def _clean_points(pts):
     out = [pts[0]]
     for p in pts[1:]:
@@ -158,7 +155,7 @@ def _clean_points(pts):
 
 
 def round_path(pts, r=CORNER):
-    """Полилиния со скруглёнными углами: прямые углы выглядят мягче."""
+    """Polyline with rounded corners."""
     if len(pts) < 3:
         return "M" + " L".join(f"{n(x)},{n(y)}" for x, y in pts)
     d = [f"M{n(pts[0][0])},{n(pts[0][1])}"]
@@ -179,7 +176,6 @@ def round_path(pts, r=CORNER):
 
 
 def edge_svg(e):
-    """Линия плюс, при необходимости, треугольная стрелка на конце."""
     pts = e["points"]
     if len(pts) < 2:
         return []
@@ -250,9 +246,9 @@ def render_svg(frame, title=None, standalone=True, name="Блок-схема", t
     return xml + head + "\n" + "\n".join(parts) + "\n</svg>\n"
 
 
-# ------------------------------------------------- модель для редактора
+# ------------------------------------------------------ editor model
 def frame_to_dict(frame, opts):
-    """Сериализует схему так, чтобы её мог перерисовать редактор в браузере."""
+    """Serialise the chart for the browser editor, which redraws it itself."""
     number_shapes(frame)
     return {
         "shapes": [{"id": s["id"], "kind": s["kind"], "x": round(s["x"], 2),
@@ -268,5 +264,4 @@ def frame_to_dict(frame, opts):
 
 
 def rewrap(text, max_chars):
-    """Тот же перенос строк, что и при разметке (нужен редактору)."""
     return wrap_text(text, max_chars)

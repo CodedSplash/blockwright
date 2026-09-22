@@ -1,15 +1,13 @@
 #!/usr/bin/env python
-"""Пересобирает папку vendor: парсеры tree-sitter и библиотеки редактора.
+"""Rebuild vendor/: tree-sitter parsers and the editor libraries.
 
-    python tools/vendor.py                 Windows x64 + Linux x86-64 + web
-    python tools/vendor.py --only linux    только одна платформа
-    python tools/vendor.py --web           только библиотеки для браузера
+    python tools/vendor.py                       Windows x64 + Linux x86-64 + web
+    python tools/vendor.py --only linux_aarch64  a single platform
+    python tools/vendor.py --web                 browser libraries only
 
-Колёса скачиваются с PyPI и распаковываются в vendor/<платформа>/<cpXY>.
-Трассировщик линий libavoid-js берётся с npm и кладётся в vendor/web —
-он один на все платформы. Node.js для этого не нужен.
-Нужен доступ в интернет; запускать достаточно раз в полгода — чтобы
-подтянуть свежие грамматики или поддержать новую версию Python.
+Wheels come from PyPI and are unpacked into vendor/<platform>/<cpXY>.
+libavoid-js comes from npm into vendor/web, shared by all platforms; Node.js
+is not needed. Needs network access.
 """
 
 import argparse
@@ -29,7 +27,7 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# консоль Windows бывает в cp1252/cp866 — иначе русский текст печатается кашей
+# a cp1252/cp866 Windows console would garble non-ASCII output
 for _stream in (sys.stdout, sys.stderr):
     try:
         _stream.reconfigure(encoding="utf-8", errors="replace")
@@ -37,8 +35,8 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 PYTHONS = ["3.10", "3.11", "3.12", "3.13", "3.14"]
-# По умолчанию собираются только две ходовые платформы — иначе папка
-# vendor/ разрастается. ARM-сборки берутся из релиза или ставятся через pip.
+# Only the two common platforms are bundled to keep vendor/ small; ARM users
+# take a release binary or install the parsers with pip.
 TARGETS = {
     "win_amd64": "win_amd64",
     "linux_x86_64": "manylinux2014_x86_64",
@@ -92,9 +90,9 @@ def build(platform_name, pip_tag):
     print(f"{platform_name}: {sorted(os.listdir(out))}  ({size / 1024 / 1024:.1f} МБ)")
 
 
-# --------------------------------------------------------------- web
-# libavoid (Adaptagrams) — ортогональная трассировка линий с обходом блоков,
-# та же, что в Inkscape и Dunnart. Сборка под WebAssembly — libavoid-js.
+# -------------------------------------------------------------------- web
+# libavoid (Adaptagrams): orthogonal connector routing around obstacles, as
+# used by Inkscape and Dunnart; libavoid-js is its WebAssembly build.
 AVOID_VERSION = "0.5.0-beta.5"
 AVOID_URL = f"https://registry.npmjs.org/libavoid-js/-/libavoid-js-{AVOID_VERSION}.tgz"
 AVOID_SHA512 = ("jHkn6A10815TgFhZ1paUD/NDnQkg4C66qJc2Juj1NpmO/"
@@ -102,26 +100,25 @@ AVOID_SHA512 = ("jHkn6A10815TgFhZ1paUD/NDnQkg4C66qJc2Juj1NpmO/"
 AVOID_README = """\
 # libavoid-js {version}
 
-Ортогональная трассировка линий для редактора схем (index.html).
+Orthogonal connector routing for the chart editor (index.html).
 
-* Исходники: https://github.com/Aksem/libavoid-js — порт libavoid из
-  Adaptagrams (https://github.com/mjwybrow/adaptagrams) в WebAssembly.
-* Лицензия: LGPL-2.1-or-later, текст — в файле LICENSE рядом.
-* libavoid.wasm — без изменений из npm-пакета libavoid-js@{version}.
-* libavoid.js — dist/index.js того же пакета, переделанный из ES-модуля в
-  обычный скрипт: `import.meta.url` заменён, вместо `export` выставлена
-  глобальная фабрика `AvoidModule`. Иначе модуль не грузится со страницы,
-  открытой как file://.
+* Source: https://github.com/Aksem/libavoid-js, a WebAssembly port of libavoid
+  from Adaptagrams (https://github.com/mjwybrow/adaptagrams).
+* License: LGPL-2.1-or-later, see LICENSE next to this file.
+* libavoid.wasm is unmodified from the npm package libavoid-js@{version}.
+* libavoid.js is dist/index.js of the same package turned from an ES module
+  into a classic script: `import.meta.url` is replaced and a global
+  `AvoidModule` factory is exposed instead of `export`, because modules do not
+  load from a page opened as file://.
 
-Пересобрать: `python tools/vendor.py --web`.
+Rebuild with `python tools/vendor.py --web`.
 """
 
 
 def _classic_script(js):
-    """ES-модуль Emscripten -> обычный скрипт с глобальной AvoidModule."""
     js = js.replace("import.meta.url", '(typeof document<"u"&&document.baseURI||"")')
     js = re.sub(r"\n?//# sourceMappingURL=\S*\s*$", "", js)
-    # в конце: var W=Wrap(Factory);export{W as AvoidLib};
+    # the module ends with: var W=Wrap(Factory);export{W as AvoidLib};
     tail = re.search(r"var (\w+)=\w+\((\w+)\);export\s*\{\s*\1 as AvoidLib\s*\};?\s*$", js)
     if not tail:
         raise SystemExit("libavoid-js: не узнаю конец модуля — формат пакета сменился")

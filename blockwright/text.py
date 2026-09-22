@@ -1,8 +1,7 @@
-"""Работа с текстом внутри блоков: измерение и перенос строк.
+"""Measuring and wrapping text inside blocks.
 
-Внутри блоков используется моноширинный шрифт — это даёт точное
-измерение ширины текста (ширина символа = 0.6 * кегль) и, как следствие,
-геометрически корректную вёрстку схемы без «наезда» текста на границы.
+Blocks use a monospace font, so the width of a line is exact
+(0.6 × font size per glyph) and text never runs over a block's outline.
 """
 
 import re
@@ -10,7 +9,7 @@ import re
 FONT_MONO = "Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', 'Courier New', monospace"
 FONT_UI = "Segoe UI, 'Noto Sans', Arial, sans-serif"
 
-CHAR_RATIO = 0.6  # ширина глифа моноширинного шрифта относительно кегля
+CHAR_RATIO = 0.6
 
 
 def text_width(s: str, size: float) -> float:
@@ -18,7 +17,7 @@ def text_width(s: str, size: float) -> float:
 
 
 def normalize(s: str) -> str:
-    """Схлопывает переводы строк и лишние пробелы."""
+    """Collapse newlines and runs of whitespace."""
     s = s.replace("\r", " ").replace("\n", " ").replace("\t", " ")
     s = re.sub(r"\s+", " ", s)
     s = re.sub(r"\s*,\s*", ", ", s)
@@ -29,7 +28,7 @@ _SOFT_BREAK = re.compile(r"(?<=[,;])|(?<=\))(?=\s*[&|+\-*/%<>=?:])|(?<=[&|])(?=\
 
 
 def _hard_split(token: str, width: int):
-    """Режет слишком длинный токен по «мягким» местам либо жёстко."""
+    """Split an over-long token at soft break points, or hard if there are none."""
     parts, cur = [], ""
     for piece in re.split(r"(?<=[,;.:_>])", token):
         if not piece:
@@ -52,7 +51,7 @@ def _hard_split(token: str, width: int):
 
 
 def wrap_text(text: str, width: int):
-    """Разбивает строку на несколько строк не длиннее `width` символов."""
+    """Wrap a string into lines of at most `width` characters."""
     text = normalize(text)
     if not text:
         return [""]

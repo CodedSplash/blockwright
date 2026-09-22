@@ -1,4 +1,4 @@
-"""Поиск исходников, выбор грамматики и извлечение функций."""
+"""Finding sources, choosing a grammar and extracting functions."""
 
 import os
 
@@ -27,7 +27,6 @@ CPP_MARKERS = ("std::", "class ", "namespace ", "template<", "template <",
 
 
 def discover(paths, recursive=True):
-    """Возвращает отсортированный список исходных файлов."""
     files = []
     for p in paths:
         p = os.path.abspath(p)
@@ -73,7 +72,7 @@ def guess_language(path, src_text, force=None):
 
 
 def parse_source(src: bytes, lang: str):
-    """Парсит исходник; при ошибках пробует вторую грамматику."""
+    """Parse with the guessed grammar; on syntax errors try the other one."""
     order = ["cpp", "c"] if lang == "cpp" else ["c", "cpp"]
     best = None
     for name in order:
@@ -87,7 +86,6 @@ def parse_source(src: bytes, lang: str):
     return best
 
 
-# ------------------------------------------------------------- функции
 def _text(src, node):
     if node is None:
         return ""
@@ -160,7 +158,7 @@ def _params(src, fdecl):
 
 
 def collect_functions(src, root):
-    """Возвращает список узлов function_definition верхнего уровня."""
+    """Outermost function_definition nodes (nested ones belong to them)."""
     out = []
 
     def rec(node, inside):
@@ -199,7 +197,7 @@ def describe_function(src, node):
 
 
 def collect_known_names(src, root):
-    """Имена функций, определённых или объявленных в файле."""
+    """Names of functions defined or declared in the file."""
     names = set()
     stack = [root]
     while stack:

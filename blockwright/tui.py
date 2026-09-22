@@ -1,8 +1,7 @@
-"""Интерактивный выбор исходников прямо в консоли.
+"""Interactive source picker in the terminal.
 
-Работает и в Windows, и в Linux/macOS: вывод — ANSI-последовательности,
-ввод — msvcrt (Windows) или termios (POSIX). Мышь включается, если
-терминал её поддерживает; без неё всё доступно с клавиатуры.
+Output is ANSI escape codes, input comes from msvcrt on Windows and termios
+elsewhere. Mouse reporting is enabled when the terminal supports it.
 """
 
 import os
@@ -13,7 +12,7 @@ from . import parse as P
 
 IS_WIN = os.name == "nt"
 
-# --- оформление ----------------------------------------------------------
+# ------------------------------------------------------------------- style
 R = "\x1b[0m"
 B = "\x1b[1m"
 DIM = "\x1b[38;5;245m"
@@ -57,7 +56,7 @@ PNG_SCALES = [0, 1, 2, 3, 4]
 DEFAULTS = {"for_style": "auto", "io_style": "pretty", "return_style": "auto",
             "width": 38, "png": 0, "keep_std": False, "ui_lang": "ru"}
 
-# --- переводы интерфейса -------------------------------------------------
+# -------------------------------------------------------------------- i18n
 L10N = {
     "ru": {
         "title": "  Блок-схемы C / C++   ·   выбор исходников",
@@ -113,7 +112,7 @@ def tr(key, *args):
     return text
 
 
-# ---------------------------------------------------------------- терминал
+# ---------------------------------------------------------------- terminal
 def enable_vt():
     if not IS_WIN:
         return True
@@ -131,7 +130,7 @@ def enable_vt():
 
 
 class Input:
-    """События: ('key', имя) либо ('mouse', кнопка, x, y)."""
+    """Events: ('key', name) or ('mouse', button, x, y)."""
 
     def __init__(self):
         self._saved = None
@@ -211,7 +210,6 @@ class Input:
 
 
 def plain_len(s):
-    """Длина строки без ANSI-кодов."""
     out, i = 0, 0
     while i < len(s):
         if s[i] == "\x1b":
@@ -224,7 +222,7 @@ def plain_len(s):
 
 
 def fit(s, width):
-    """Обрезает строку с ANSI-кодами до width видимых символов."""
+    """Cut a string with ANSI codes to `width` visible characters."""
     if plain_len(s) <= width:
         return s
     out, seen, i = [], 0, 0
@@ -246,7 +244,7 @@ def pad(s, width):
     return s + " " * max(0, width - n) if n <= width else fit(s, width)
 
 
-# -------------------------------------------------------------------- окно
+# ------------------------------------------------------------------ picker
 class Picker:
     def __init__(self, root, cfg):
         self.cwd = os.path.abspath(root)
@@ -254,10 +252,10 @@ class Picker:
             self.cwd = os.path.dirname(self.cwd) or os.getcwd()
         self.cfg = cfg
         self.g = Glyphs(_unicode_ok())
-        self.marked = set()          # абсолютные пути выбранных файлов
+        self.marked = set()          # absolute paths of marked files
         self.cache = {}              # path -> (mtime, [(name, line)])
         self.funcs = []
-        self.func_off = set()        # выключенные функции (ключ rel::name)
+        self.func_off = set()        # functions switched off, keyed rel::name
         self.panel = 0
         self.cur = [0, 0]
         self.top = [0, 0]
@@ -269,7 +267,7 @@ class Picker:
         self.mark_all_in(self.cwd, True)
         self.refresh()
 
-    # --- файловая система ---
+    # --- file system
     def listing(self):
         items = []
         parent = os.path.dirname(self.cwd)
@@ -306,7 +304,7 @@ class Picker:
             return (0, 0)
         return (sum(1 for f in src if f in self.marked), len(src))
 
-    # --- функции ---
+    # --- functions
     def file_funcs(self, path):
         try:
             mtime = os.path.getmtime(path)
@@ -374,7 +372,7 @@ class Picker:
     def items(self, panel):
         return self.visible_entries() if panel == 0 else self.visible_funcs()
 
-    # --- отрисовка ---
+    # --- drawing
     def frame(self, out, row, width, text, kind):
         g = self.g
         if kind == "top":
@@ -515,7 +513,7 @@ class Picker:
         body = body + " " * max(1, space) + loc
         return self._cursor(1, idx, pad(body, width - 2))
 
-    # --- действия ---
+    # --- actions
     def enter_dir(self, path):
         self.cwd = os.path.abspath(path)
         self.cur[0] = 0
@@ -576,7 +574,7 @@ class Picker:
         elif key == "w":
             c["width"] = 26 if c["width"] >= 50 else c["width"] + 6
 
-    # --- цикл ---
+    # --- main loop
     def run(self):
         sys.stdout.write("\x1b[?1049h\x1b[?25l\x1b[2J")
         try:
@@ -699,7 +697,7 @@ class Picker:
 
 
 def run(root, cfg=None):
-    """Показывает окно выбора. Возвращает конфиг, False (отмена) или None."""
+    """Show the picker; returns the config, False when cancelled, or None."""
     global LANG
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         return None
@@ -715,7 +713,7 @@ def run(root, cfg=None):
 
 
 def pause(message=None):
-    """Ждёт нажатия клавиши, чтобы окно консоли не закрылось."""
+    """Wait for a key so a double-clicked console window does not vanish."""
     if not sys.stdin.isatty():
         return
     sys.stdout.write("\n" + DIM + message + R + "\n")

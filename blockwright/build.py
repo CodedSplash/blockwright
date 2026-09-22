@@ -1,11 +1,11 @@
-"""Построение IR блок-схемы по синтаксическому дереву tree-sitter."""
+"""Building the flowchart IR from a tree-sitter syntax tree."""
 
 import re
 
 from . import model as M
 from .text import normalize
 
-# --- функции ввода-вывода из <stdio.h> ------------------------------------
+# I/O functions and streams
 OUT_FUNCS = {"printf", "fprintf", "puts", "fputs", "putchar", "putc", "vprintf",
              "printf_s", "wprintf", "cout"}
 IN_FUNCS = {"scanf", "fscanf", "sscanf", "gets", "gets_s", "fgets", "getchar",
@@ -14,7 +14,7 @@ OUT_STREAMS = {"cout", "cerr", "clog", "wcout"}
 IN_STREAMS = {"cin", "wcin"}
 ENDL = {"std::endl", "endl", '"\\n"', "'\\n'", "std::flush", "flush"}
 
-# манипуляторы форматирования — сами по себе ничего не выводят
+# stream manipulators print nothing by themselves
 MANIPULATORS = {"endl", "flush", "ends", "fixed", "scientific", "hexfloat",
                 "defaultfloat", "boolalpha", "noboolalpha", "showpoint",
                 "noshowpoint", "showpos", "noshowpos", "left", "right",
@@ -24,18 +24,18 @@ MANIPULATORS = {"endl", "flush", "ends", "fixed", "scientific", "hexfloat",
 STR_TYPES = {"string_literal", "raw_string_literal", "concatenated_string",
              "char_literal"}
 
-# escape-последовательности -> то, что видно на экране
+# escape sequence -> what appears on screen
 _ESCAPES = {"n": " ", "t": " ", "r": "", "0": "", "a": "", "b": "", "f": " ",
             "v": " ", "\\": "\\", '"': '"', "'": "'", "?": "?"}
 
-# спецификаторы формата printf/scanf
+# printf/scanf conversion specifiers
 _SPEC_RE = re.compile(
     r"%(?:%|[-+ #0']*\*?\d*(?:\.\*?\d+)?(?:hh|h|ll|l|L|q|z|j|t)?"
     r"[diuoxXfFeEgGaAcspn])")
 
 _INT_RE = re.compile(r"^[+-]?\d+$")
 
-# --- подписи на самой схеме (не интерфейс, а текст блоков) ---------------
+# words printed inside blocks
 CHART_L10N = {
     "ru": {
         "out": "Вывод: ", "out_plain": "Вывод", "in": "Ввод: ", "in_plain": "Ввод",
@@ -64,7 +64,6 @@ def label(lang, key, *args):
 
 
 def unescape(s):
-    """Раскрывает escape-последовательности строкового литерала."""
     out, i = [], 0
     while i < len(s):
         if s[i] == "\\" and i + 1 < len(s):
@@ -110,7 +109,7 @@ def strip_parens(s):
 
 
 class Builder:
-    """Преобразует поддерево функции в IR блок-схемы."""
+    """Turns a function body into flowchart IR."""
 
     def __init__(self, src: bytes, opts, known_funcs=frozenset()):
         self.src = src
@@ -122,7 +121,6 @@ class Builder:
     def L(self, key, *args):
         return label(self.lang, key, *args)
 
-    # ---------- утилиты ----------
     def t(self, node):
         if node is None:
             return ""
@@ -151,7 +149,6 @@ class Builder:
                 return self.raw_name(c)
         return ""
 
-    # ---------- вход ----------
     def build_body(self, body_node, is_main=False):
         self.fn_is_main = is_main
         return M.Seq(self.stmt_list(body_node))
@@ -170,7 +167,6 @@ class Builder:
     def block(self, node):
         return M.Seq(self.stmt_list(node))
 
-    # ---------- операторы ----------
     def stmt(self, n):
         k = n.type
         if k in ("comment", "preproc_call"):
@@ -220,11 +216,10 @@ class Builder:
                              terminal=True)]
         if k in (";", "ERROR"):
             return []
-        # всё остальное — обычный процесс
+        # anything else is a plain process block
         txt = self.t(n).rstrip(";")
         return [M.Simple(M.PROCESS, txt)] if txt else []
 
-    # ---------- отдельные конструкции ----------
     def cond_text(self, node):
         if node is None:
             return self.L("condition")
@@ -237,7 +232,6 @@ class Builder:
 
     def declaration(self, n):
         txt = self.t(n).rstrip(";").strip()
-        # вызов пользовательской функции в инициализаторе не меняет тип блока
         return M.Simple(M.PROCESS, txt)
 
     def return_stmt(self, n):
@@ -245,10 +239,9 @@ class Builder:
         txt = self.t(inner) if inner is not None else ""
         style = getattr(self.opts, "return_style", "auto")
         if style == "end" or not txt:
-            # `return;` — это просто конец подпрограммы
             label = self.opts.end_label
         elif style == "auto" and self.fn_is_main and txt in ("0", "EXIT_SUCCESS"):
-            # `return 0` в main — штатное завершение программы, не «значение»
+            # `return 0` in main is a normal end of the program, not a value
             label = self.opts.end_label
         else:
             label = self.L("return", txt)
@@ -269,7 +262,6 @@ class Builder:
                 else_ = None
         return M.If(cond, then_, else_)
 
-    # --- for -------------------------------------------------------------
     def _simple_from_node(self, node):
         if node is None:
             return None
@@ -277,11 +269,10 @@ class Builder:
         return M.Simple(M.PROCESS, txt) if txt else None
 
     def _canonical_for(self, n):
-        """Распознаёт «школьный» счётный цикл -> текст шестиугольника."""
+        """Header text for a plain counting loop, e.g. `i = 0, n - 1`; None otherwise."""
         init, cond, upd = self.f(n, "initializer"), self.f(n, "condition"), self.f(n, "update")
         if init is None or cond is None or upd is None:
             return None
-        # переменная и начальное значение
         var = start = None
         if init.type == "declaration":
             decls = [c for c in init.named_children if c.type == "init_declarator"]
@@ -296,7 +287,6 @@ class Builder:
             return None
         if not var or not start or not re.fullmatch(r"[A-Za-z_]\w*", var):
             return None
-        # условие
         if cond.type != "binary_expression":
             return None
         op = self.op_of(cond)
@@ -305,7 +295,6 @@ class Builder:
         if self.t(self.f(cond, "left")) != var:
             return None
         limit = self.t(self.f(cond, "right"))
-        # шаг
         step = None
         if upd.type == "update_expression":
             if self.t(self.f(upd, "argument")) != var:
@@ -365,7 +354,6 @@ class Builder:
                              cond=self.L("more", cont), update=None)
         return M.ForLoop(body=body, style="hexagon", header=header)
 
-    # --- switch ----------------------------------------------------------
     def switch_stmt(self, n):
         expr = self.cond_text(self.f(n, "condition"))
         body = self.f(n, "body")
@@ -382,7 +370,7 @@ class Builder:
                         continue
                     stmts.extend(self.stmt(c))
                 if not stmts:
-                    # пустая ветка `case X:` — объединяем с следующей
+                    # an empty `case X:` shares the next case's body
                     pending_labels.append(label)
                     continue
                 labels = pending_labels + [label]
@@ -391,7 +379,6 @@ class Builder:
                 cases.append(M.Case(labels, blk, is_default=val is None))
             if pending_labels:
                 cases.append(M.Case(pending_labels, M.Seq([])))
-        # определить «проваливание» (нет break/return в конце ветки)
         for i, c in enumerate(cases):
             c.fallthrough = (i < len(cases) - 1) and not _ends_flow(c.body)
         return M.Switch(expr, cases)
@@ -406,7 +393,6 @@ class Builder:
                 items.append(M.If(cond, self.block(self.f(c, "body")), None))
         return items
 
-    # --- выражения -------------------------------------------------------
     def expression_statement(self, n):
         inner = n.named_children[0] if n.named_children else None
         if inner is None:
@@ -433,9 +419,7 @@ class Builder:
             return False
         return self.callee_name(call) in self.known
 
-    # --- сборка человекочитаемого текста ввода-вывода --------------------
     def _string_value(self, node):
-        """Содержимое строкового литерала без кавычек, либо None."""
         if node is None:
             return None
         if node.type == "concatenated_string":
@@ -458,11 +442,10 @@ class Builder:
         return name in MANIPULATORS
 
     def _weave(self, segments, prefix):
-        """Склеивает куски текста и выражений в одну читаемую строку.
+        """Join literal text and expressions into one readable line.
 
-        Текст из литералов идёт как есть, значения выражений подставляются
-        в фигурных скобках — получается «Вывод: Задание #{job.id} (12 стр.)»
-        вместо «Вывод: " Задание #", job.id, " (", ...».
+        Literals are kept as is and expressions go in braces, giving
+        `Output: Job #{job.id}` instead of `Output: " Job #", job.id`.
         """
         exprs = [v for kind, v in segments if kind == "expr"]
         if not any(kind == "text" for kind, _ in segments):
@@ -489,7 +472,7 @@ class Builder:
         return segs
 
     def _format_call(self, fmt_node, arg_nodes, prefix):
-        """printf-подобный вызов -> текст с подставленными аргументами."""
+        """A printf-style call as its format string with the arguments filled in."""
         fmt = self._string_value(fmt_node)
         args = [self.t(a) for a in arg_nodes]
         if fmt is None:
@@ -519,11 +502,10 @@ class Builder:
         return [node]
 
     def try_io(self, node):
-        """Распознаёт ввод-вывод; возвращает блок IO либо None."""
+        """An I/O block for stream or stdio calls, None for anything else."""
         style = self.opts.io_style
         code_style = style == "code"
         pretty = style == "pretty"
-        # --- потоки C++ ---
         if node.type == "binary_expression" and self.op_of(node) in ("<<", ">>"):
             op = self.op_of(node)
             parts = self._flatten_stream(node, op)
@@ -544,7 +526,6 @@ class Builder:
                 args = [self.t(p) for p in parts[1:]]
                 return M.Simple(M.IO, self.L("in") + ", ".join(args))
             return None
-        # --- функции C ---
         if node.type == "call_expression":
             name = self.callee_name(node)
             arglist = self.f(node, "arguments")
@@ -588,7 +569,7 @@ class Builder:
 
 
 def _ends_flow(block):
-    """True, если поток управления не доходит до конца блока (break/return)."""
+    """True if control never reaches the end of the block (break / return)."""
     items = block.items if isinstance(block, M.Seq) else [block]
     if not items:
         return False

@@ -1,7 +1,7 @@
 @echo off
-rem blockwright — блок-схемы по коду C/C++.
-rem   без аргументов          -> выбор исходников в консоли
-rem   blockwright.bat "путь"  -> сразу построить схемы
+rem blockwright launcher for Windows.
+rem   no arguments            pick sources in the terminal
+rem   blockwright.bat "path"  build charts right away
 chcp 65001 >nul
 setlocal
 

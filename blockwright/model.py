@@ -1,36 +1,35 @@
-"""Промежуточное представление (IR) блок-схемы.
+"""Intermediate representation of a flowchart.
 
-IR — это структурное дерево (последовательность, ветвление, циклы,
-переключатель) плюс «нелокальные» переходы (break / continue / return /
-goto). Такое представление позволяет строить схему без универсального
-graph-layout: каждая конструкция знает, как разместить себя сама.
+A structured tree (sequence, branch, loops, switch) plus non-local jumps
+(break / continue / return / goto). Every construct lays itself out, so no
+general-purpose graph layout is needed.
 """
 
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-# --- типы блоков по ГОСТ 19.701-90 ---------------------------------------
-TERMINATOR = "terminator"     # начало / конец / возврат (овал)
-PROCESS = "process"           # процесс (прямоугольник)
-IO = "io"                     # ввод-вывод (параллелограмм)
-DECISION = "decision"         # решение (ромб)
-PREDEF = "predefined"         # предопределённый процесс (вызов функции)
-PREP = "preparation"          # подготовка (заголовок цикла, шестиугольник)
-CONNECTOR = "connector"       # соединитель (круг)
+# block kinds of GOST 19.701-90
+TERMINATOR = "terminator"     # start / end / return
+PROCESS = "process"
+IO = "io"
+DECISION = "decision"
+PREDEF = "predefined"         # call of a user function
+PREP = "preparation"          # loop header
+CONNECTOR = "connector"
 
 
 @dataclass
 class Simple:
-    """Одиночный блок с одним входом и (необязательно) одним выходом."""
+    """A single block with one entry and at most one exit."""
     kind: str
     text: str
-    terminal: bool = False    # True -> у блока нет выхода (return / throw)
+    terminal: bool = False    # no exit: return / throw
 
 
 @dataclass
 class Jump:
-    """break / continue — переход без собственного блока."""
-    kind: str                 # 'break' | 'continue'
+    """break / continue: a jump without a block of its own."""
+    kind: str
 
 
 @dataclass
@@ -60,8 +59,8 @@ class DoWhile:
 @dataclass
 class ForLoop:
     body: object
-    style: str = "decision"           # 'hexagon' | 'decision'
-    header: str = ""                  # текст шестиугольника (style='hexagon')
+    style: str = "decision"
+    header: str = ""
     init: Optional[Simple] = None
     cond: Optional[str] = None
     update: Optional[Simple] = None
@@ -72,7 +71,7 @@ class Case:
     labels: List[str]
     body: object
     fallthrough: bool = False
-    is_default: bool = False      # ветка default, её метка зависит от языка
+    is_default: bool = False
 
 
 @dataclass
@@ -83,9 +82,9 @@ class Switch:
 
 @dataclass
 class Function:
-    name: str            # полное имя (с классом/пространством имён)
-    signature: str       # сигнатура для подписи схемы
-    short: str           # текст блока «Начало»
+    name: str            # qualified with class / namespace
+    signature: str
+    short: str           # text of the start block
     file: str
     rel: str
     line: int

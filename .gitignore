@@ -1,23 +1,22 @@
 # Python
-# ВНИМАНИЕ: не писать *.py[cod] — шаблон заодно съедает *.pyd,
-# а это бинарные модули парсеров в vendor/
+# not *.py[cod]: that would also ignore the *.pyd parser modules in vendor/
 __pycache__/
 *.py[co]
 *.egg-info/
 .venv/
 venv/
 
-# сборка исполняемого файла
+# single-file build
 build/
 dist/
 *.spec
 
-# результаты работы утилиты
+# generated charts
 блок-схемы/
 flowcharts/
 .blockwright-prefs.json
 
-# редакторы и система
+# editors and OS
 .vscode/
 .idea/
 *.swp

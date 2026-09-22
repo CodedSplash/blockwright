@@ -1,4 +1,4 @@
-"""Командный интерфейс утилиты построения блок-схем."""
+"""Command-line interface."""
 
 import argparse
 import fnmatch
@@ -28,7 +28,7 @@ class Opts:
     io_style: str = "pretty"       # pretty | list | code
     for_style: str = "auto"        # auto | hexagon | decision
     return_style: str = "auto"     # auto | value | end
-    lang: str = "ru"               # язык подписей на схеме
+    lang: str = "ru"               # language of the words on the charts
     yes_label: str = "Да"
     no_label: str = "Нет"
     begin_label: str = "Начало"
@@ -49,7 +49,7 @@ _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
 def open_in_browser(path):
-    """Открывает готовый альбом: на Android — через termux-open."""
+    """Open the album; on Android through termux-open."""
     full = os.path.abspath(path)
     if vendored.is_termux():
         opener = shutil.which("termux-open")
@@ -70,10 +70,9 @@ def open_in_browser(path):
 
 
 def rel_path(path, base):
-    """Путь относительно базовой папки; на другом диске — как есть."""
     try:
         rel = os.path.relpath(path, base)
-    except ValueError:                       # другой диск в Windows
+    except ValueError:                       # another drive on Windows
         rel = path
     if rel.startswith(".." + os.sep) or rel.startswith("../"):
         rel = os.path.basename(path)
@@ -185,7 +184,7 @@ def save_prefs(cfg):
 
 
 def run_picker(args):
-    """Интерактивный выбор; правит args на месте. False — отменено."""
+    """Run the picker and update args in place; False if cancelled."""
     from . import tui
     prefs = load_prefs()
     start = args.paths[0] if args.paths else prefs.get("root") or os.getcwd()
@@ -217,7 +216,7 @@ def run_picker(args):
 def main(argv=None):
     args = build_parser().parse_args(argv)
     prefs = load_prefs()
-    # ключ командной строки важнее запомненного выбора
+    # command-line flags win over remembered choices
     args.ui_lang = args.ui_lang or prefs.get("ui_lang") or "ru"
     args.theme = args.theme or prefs.get("theme") or "light"
     from_ui = False
@@ -248,7 +247,7 @@ def main(argv=None):
     root = os.path.abspath(paths[0])
     if os.path.isfile(root):
         root = os.path.dirname(root)
-    # общая папка всех найденных файлов — для коротких подписей в схемах
+    # common folder of all sources keeps chart captions short
     base_dir = root
     try:
         common = os.path.commonpath(files)
@@ -263,7 +262,7 @@ def main(argv=None):
         if not args.quiet:
             print(*a)
 
-    # первый проход — собрать имена пользовательских функций во всём проекте
+    # first pass: names of user functions across the whole project
     parsed = []
     known = set()
     for path in files:

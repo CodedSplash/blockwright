@@ -1,14 +1,14 @@
 # libavoid-js 0.5.0-beta.5
 
-Ортогональная трассировка линий для редактора схем (index.html).
+Orthogonal connector routing for the chart editor (index.html).
 
-* Исходники: https://github.com/Aksem/libavoid-js — порт libavoid из
-  Adaptagrams (https://github.com/mjwybrow/adaptagrams) в WebAssembly.
-* Лицензия: LGPL-2.1-or-later, текст — в файле LICENSE рядом.
-* libavoid.wasm — без изменений из npm-пакета libavoid-js@0.5.0-beta.5.
-* libavoid.js — dist/index.js того же пакета, переделанный из ES-модуля в
-  обычный скрипт: `import.meta.url` заменён, вместо `export` выставлена
-  глобальная фабрика `AvoidModule`. Иначе модуль не грузится со страницы,
-  открытой как file://.
+* Source: https://github.com/Aksem/libavoid-js, a WebAssembly port of libavoid
+  from Adaptagrams (https://github.com/mjwybrow/adaptagrams).
+* License: LGPL-2.1-or-later, see LICENSE next to this file.
+* libavoid.wasm is unmodified from the npm package libavoid-js@0.5.0-beta.5.
+* libavoid.js is dist/index.js of the same package turned from an ES module
+  into a classic script: `import.meta.url` is replaced and a global
+  `AvoidModule` factory is exposed instead of `export`, because modules do not
+  load from a page opened as file://.
 
-Пересобрать: `python tools/vendor.py --web`.
+Rebuild with `python tools/vendor.py --web`.

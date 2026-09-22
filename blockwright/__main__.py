@@ -1,14 +1,14 @@
-"""Точка входа: python -m blockwright
+"""Entry point.
 
-    python -m blockwright                       выбор исходников в консоли
-    python -m blockwright "Лабораторная №1"     сразу построить схемы
+    python -m blockwright             pick sources in the terminal
+    python -m blockwright "Lab 1"     build charts right away
 """
 
 import sys
 
 from . import vendored
 
-# на Windows консоль часто в cp866/cp1251 — принудительно выводим в UTF-8
+# Windows consoles often default to cp866/cp1251
 for _stream in (sys.stdout, sys.stderr):
     try:
         _stream.reconfigure(encoding="utf-8", errors="replace")

@@ -1,15 +1,12 @@
 #!/usr/bin/env python
-"""Сборка blockwright в один исполняемый файл.
+"""Build blockwright into a single executable with PyInstaller.
 
-    python build.py            собрать для текущей ОС
-    python build.py --clean    убрать временные папки сборки
+    python build.py            build for the current OS
+    python build.py --clean    remove build leftovers
 
-Windows даёт `dist/blockwright.exe`, Linux — `dist/blockwright`. Файл
-самодостаточный: Python и парсеры tree-sitter уже внутри, так что на
-другой машине ничего ставить не нужно (нужна та же ОС и разрядность).
-
-Собирать нужно на той системе, для которой делается сборка: exe — в
-Windows, бинарник Linux — в Linux (подойдёт и WSL).
+Produces `dist/blockwright.exe` on Windows and `dist/blockwright` on Linux,
+with Python, the parsers and the editor libraries inside. Build on the target
+OS (WSL works for Linux).
 """
 
 import argparse
@@ -21,7 +18,7 @@ import sys
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 
-# консоль Windows бывает в cp1252/cp866 — иначе русский текст роняет сборку
+# a cp1252/cp866 Windows console would crash on non-ASCII output
 for _stream in (sys.stdout, sys.stderr):
     try:
         _stream.reconfigure(encoding="utf-8", errors="replace")
@@ -85,7 +82,7 @@ def main():
         cmd += ["--hidden-import", mod, "--collect-binaries", mod]
     for mod in ("blockwright.tui", "blockwright.album", "blockwright.png"):
         cmd += ["--hidden-import", mod]
-    # трассировщик линий для редактора — встраивается в index.html
+    # the editor's connector router, inlined into index.html
     web = os.path.join(BASE, "vendor", "web")
     if os.path.isdir(web):
         cmd += ["--add-data", f"{web}{os.pathsep}{os.path.join('vendor', 'web')}"]

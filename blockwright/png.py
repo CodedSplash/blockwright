@@ -1,7 +1,6 @@
-"""Пакетный экспорт SVG -> PNG через headless-браузер (Edge или Chrome).
+"""SVG to PNG through a headless Chromium-based browser (Edge or Chrome).
 
-Отдельная библиотека растеризации не нужна: на Windows Edge стоит всегда,
-а он умеет снимать страницу в PNG из командной строки.
+Edge ships with every Windows, so no rasterisation library is needed.
 """
 
 import os
@@ -10,18 +9,15 @@ import shutil
 import subprocess
 
 CANDIDATES = [
-    # Windows
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files\Chromium\Application\chrome.exe",
-    # Linux
     "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
     "/usr/bin/chromium", "/usr/bin/chromium-browser",
     "/snap/bin/chromium", "/usr/bin/microsoft-edge",
     "/var/lib/flatpak/exports/bin/org.chromium.Chromium",
-    # macOS
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
@@ -53,7 +49,7 @@ def svg_size(path):
 
 
 def convert(svg_path, png_path, scale=2.0, browser=None, timeout=90):
-    """Снимает PNG с SVG-файла. Возвращает True при успехе."""
+    """Screenshot an SVG file into a PNG; True on success."""
     browser = browser or find_browser()
     if not browser:
         return False

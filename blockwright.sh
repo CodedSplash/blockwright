@@ -1,7 +1,7 @@
 #!/bin/sh
-# blockwright — блок-схемы по коду C/C++ (Linux, macOS).
-#   ./blockwright.sh          -> выбор исходников в консоли
-#   ./blockwright.sh <путь>   -> сразу построить схемы
+# blockwright launcher for Linux and macOS.
+#   ./blockwright.sh          pick sources in the terminal
+#   ./blockwright.sh <path>   build charts right away
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 PY=""

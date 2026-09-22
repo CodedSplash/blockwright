@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-"""Снимает экран консольного выбора и оформляет его как окно терминала.
+"""Render the terminal picker as a terminal-window screenshot for the docs.
 
     python tools/screenshot_picker.py           -> docs/picker.html
-    python tools/screenshot_picker.py --png     -> ещё и docs/picker.png
+    python tools/screenshot_picker.py --png     -> docs/picker.png as well
 
-Экран рисуется настоящим кодом из blockwright.tui, ANSI-раскраска
-переводится в HTML, а показываемый путь заменяется на демонстрационный,
-чтобы в документацию не попадали чужие каталоги.
+The screen is drawn by blockwright.tui itself and ANSI colours become HTML;
+the path shown is replaced with a made-up one.
 """
 
 import argparse
@@ -50,7 +49,6 @@ PALETTE = xterm256()
 
 
 def ansi_to_html(text):
-    """Переводит ANSI-раскраску строки в набор span-ов."""
     state = {"fg": None, "bg": None, "bold": False, "inv": False}
     out, buf = [], []
 
@@ -110,10 +108,10 @@ def capture(source):
     shutil.get_terminal_size = lambda d=(80, 24): os.terminal_size((COLS, ROWS))
     picker = tui.Picker(source, dict(tui.DEFAULTS))
     for i, (kind, _, name) in enumerate(picker.visible_entries()):
-        if kind == "dir" and name == "examples":       # курсор на примере
+        if kind == "dir" and name == "examples":
             picker.cur[0] = i
             break
-    picker.cwd = DEMO_PATH            # в документацию идёт выдуманный путь
+    picker.cwd = DEMO_PATH
     buf, old = io.StringIO(), sys.stdout
     sys.stdout = buf
     try:

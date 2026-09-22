@@ -1,12 +1,12 @@
 #!/bin/sh
-# Установка blockwright в Termux (Android).
+# Install blockwright in Termux (Android).
 #
 #     pkg install git
 #     git clone https://github.com/CodedSplash/blockwright
 #     sh blockwright/tools/install-termux.sh
 #
-# Готовых колёс tree-sitter для Termux нет, поэтому парсеры собираются на
-# месте — нужен clang. Сборка занимает пару минут.
+# There are no tree-sitter wheels for Termux, so the parsers are compiled on
+# the device with clang; it takes a couple of minutes.
 set -e
 
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)

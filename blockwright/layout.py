@@ -1,17 +1,14 @@
-"""Геометрическая разметка блок-схемы.
+"""Geometric layout of a flowchart.
 
-Схема строится структурно: каждая конструкция (последовательность,
-ветвление, цикл, переключатель) размещает себя сама и возвращает «рамку»
-(Frame) с абсолютными координатами фигур и линий внутри себя.
+Layout is structural: every construct (sequence, branch, loop, switch) places
+itself and returns a Frame holding its shapes and edges.
 
-Инвариант рамки: вход всегда в точке (spine, 0), выход — в (spine, height)
-либо отсутствует (если все пути завершаются return). Благодаря этому
-последовательное соединение блоков сводится к выравниванию по общей
-вертикальной оси.
+Frame invariant: the entry is at (spine, 0) and the exit, if any, at
+(spine, height); there is no exit when every path ends in a return. Chaining
+frames is then just aligning them on a common vertical axis.
 
-Нелокальные переходы (break / continue) оформляются «открытыми» линиями
-(pend), которые всплывают наружу по свободным дорожкам (lanes) и
-замыкаются тем циклом/переключателем, которому они принадлежат.
+break / continue become open edges (pend) that bubble outwards along free
+lanes until the loop or switch they belong to closes them.
 """
 
 from . import model as M
@@ -24,15 +21,15 @@ PAD_Y = 10
 MIN_W = 128
 MIN_H = 44
 
-V_GAP = 30          # вертикальный промежуток между блоками
-BRANCH_GAP = 30     # отступ ветвей от ромба
-CH_GAP = 20         # отступ обратной/выходной магистрали от содержимого
-LANE = 15           # шаг дорожек для линий break/continue
-TOPJOIN = 22        # запас сверху для входа обратной связи
+V_GAP = 30          # vertical gap between blocks
+BRANCH_GAP = 30     # branch offset from a decision
+CH_GAP = 20         # loop-back / exit channel offset
+LANE = 15           # lane pitch for break/continue edges
+TOPJOIN = 22        # room above a loop for the back edge
 LABEL_SIZE = 12
 
 
-# ---------------------------------------------------------------- фигуры
+# ---------------------------------------------------------------- shapes
 def make_shape(kind, text, opts):
     lines = wrap_text(text, opts.max_chars)
     tw = max(text_width(l, FONT_SIZE) for l in lines)
@@ -70,7 +67,7 @@ def _label(x, y, text, anchor="start"):
     return {"x": float(x), "y": float(y), "text": text, "anchor": anchor}
 
 
-# ----------------------------------------------------------------- рамка
+# ----------------------------------------------------------------- frame
 class Frame:
     __slots__ = ("shapes", "edges", "labels", "pend",
                  "spine", "width", "height", "exit", "entry_shape")
@@ -157,7 +154,7 @@ def _empty_frame():
 
 
 def escape(fr, pad=LANE):
-    """Выводит открытые линии (break/continue) за габариты содержимого."""
+    """Route open break/continue edges out past the frame's contents."""
     if not fr.pend:
         return
     b = fr.bbox(include_pend=False)
@@ -189,7 +186,7 @@ def escape(fr, pad=LANE):
             p["points"].append((tx, hy))
 
 
-# ------------------------------------------------------------- диспетчер
+# -------------------------------------------------------------- dispatch
 def layout(item, opts):
     if item is None:
         return _empty_frame()
@@ -259,7 +256,7 @@ def layout_seq(items, opts):
     return out.normalize()
 
 
-# ----------------------------------------------------------- ветвление
+# ---------------------------------------------------------------- branch
 def layout_if(item, opts):
     d = make_shape(M.DECISION, item.cond, opts)
     ft = layout(item.then_, opts)
@@ -316,12 +313,12 @@ def layout_if(item, opts):
     return f.normalize()
 
 
-# --------------------------------------------------------------- циклы
+# ----------------------------------------------------------------- loops
 def _close_loop(f, head_cx_half, body_bottom, body_exit, join_y, back_target_y,
                 continue_target_y=None, continue_arrow_y=None):
-    """Общее замыкание цикла: обратная связь, выход, break/continue.
+    """Close a loop: back edge, exit, break/continue.
 
-    Возвращает (exit_y, right_channel).
+    Returns (exit_y, right_channel).
     """
     escape(f)
     b = f.bbox(include_pend=True)
@@ -354,7 +351,7 @@ def _close_loop(f, head_cx_half, body_bottom, body_exit, join_y, back_target_y,
 
 
 def _pretest_loop(header_shape, body, opts, labels, pre=None, post=None):
-    """Цикл с предусловием: while, for (оба варианта оформления)."""
+    """Pre-test loop: while and both styles of for."""
     fb = layout(body, opts)
     f = Frame()
 
@@ -386,7 +383,7 @@ def _pretest_loop(header_shape, body, opts, labels, pre=None, post=None):
     body_bottom = body_top + fb.height
     body_exit = fb.exit
 
-    # блок модификации (шаг цикла) для for в «развёрнутом» виде
+    # the update step of an expanded for
     cont_target = None
     cont_join = None
     has_continue = any(p["kind"] == "continue" for p in f.pend)
@@ -457,7 +454,7 @@ def layout_do(item, opts):
     ys = [dec_y + d["h"]] + [p["points"][-1][1] for p in f.pend]
     exit_y = max(ys) + 24
 
-    # «да» — назад к началу тела
+    # "yes" goes back to the top of the body
     f.edges.append(_edge([(-d["w"] / 2, cy), (left_ch, cy), (left_ch, join_y),
                           (0.0, join_y), (0.0, top)], arrow=True))
     f.labels.append(_label(-d["w"] / 2 - 5, cy - 6, opts.yes_label, "end"))
@@ -481,7 +478,7 @@ def layout_do(item, opts):
     return f.normalize()
 
 
-# -------------------------------------------------------- переключатель
+# ---------------------------------------------------------------- switch
 def layout_switch(item, opts):
     head = make_shape(M.DECISION, item.expr, opts)
     head["x"] = -head["w"] / 2
@@ -504,7 +501,7 @@ def layout_switch(item, opts):
     x = -total / 2
     spines, rights, lefts = [], [], []
     for c in cols:
-        c.shift(x, col_top)          # после сдвига c.spine уже абсолютный
+        c.shift(x, col_top)          # c.spine is absolute after the shift
         spines.append(c.spine)
         lefts.append(x)
         rights.append(x + c.width)
@@ -538,8 +535,8 @@ def layout_switch(item, opts):
             f.edges.append(_edge([c.exit, (sp, merge_y), (0.0, merge_y)], arrow=False))
             merged = True
 
-    # break внутри case опускается прямо вниз: под своей колонкой пусто,
-    # поэтому боковой обход не нужен
+    # a break inside a case drops straight down: its column is empty below,
+    # so no side detour is needed
     breaks = [p for p in f.pend if p["kind"] == "break"]
     f.pend = [p for p in f.pend if p["kind"] != "break"]
     for p in breaks:
@@ -563,7 +560,7 @@ def layout_switch(item, opts):
     return f.normalize()
 
 
-# ------------------------------------------------------------- функция
+# -------------------------------------------------------------- function
 def layout_function(fn, opts):
     start = M.Simple(M.TERMINATOR, opts.begin_label if opts.plain_begin else fn.short)
     fs = layout_simple(start, opts)
@@ -586,7 +583,7 @@ def layout_function(fn, opts):
         out.absorb(fe)
         y = y + V_GAP + fe.height
 
-    # незамкнутые переходы (break/continue вне цикла) — обрываем аккуратно
+    # break/continue outside any loop: end the edge cleanly
     for p in out.pend:
         out.edges.append(_edge(p["points"], arrow=False))
     out.pend = []

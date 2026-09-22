@@ -1,8 +1,7 @@
-"""Точка входа для PyInstaller.
+"""PyInstaller entry point.
 
-Собранный файл запускается как обычный скрипт, поэтому относительные
-импорты пакета из blockwright/__main__.py напрямую не работают — здесь
-пакет импортируется обычным образом.
+The bundle runs this as a plain script, where the relative imports of
+blockwright/__main__.py would fail, so the package is imported normally.
 """
 
 import os

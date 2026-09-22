@@ -1,11 +1,11 @@
-"""Режим «без установки»: парсеры tree-sitter из папки vendor.
+"""Zero-install mode: tree-sitter parsers bundled in vendor/.
 
-В репозитории рядом лежат готовые сборки парсеров для разных платформ и
-версий CPython. Если в системе их нет, точка входа подключает подходящую
-папку к sys.path — и утилита работает сразу после копирования, без pip.
+The repository carries prebuilt parsers for several platforms and CPython
+versions. When the system has none, the matching folder is put on sys.path,
+so a plain clone runs without pip.
 
-Исключение — Termux на Android: там своя libc, колёс на PyPI для неё нет,
-поэтому парсеры собираются на месте (см. tools/install-termux.sh).
+Termux is the exception: Android's libc has no wheels on PyPI, so the parsers
+are compiled on the device (tools/install-termux.sh).
 """
 
 import os
@@ -15,13 +15,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def is_termux():
-    """Termux на Android: свой префикс и libc, готовых колёс для него нет."""
     return ("com.termux" in os.environ.get("PREFIX", "")
             or os.path.isdir("/data/data/com.termux/files/usr"))
 
 
 def platform_tag():
-    """Имя папки vendor для текущей ОС и архитектуры."""
     import platform
     arch = platform.machine().lower()
     if sys.platform.startswith("win"):
@@ -38,7 +36,6 @@ def platform_tag():
 
 
 def paths(root=None):
-    """Папки vendor, подходящие текущему интерпретатору."""
     tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
     base = os.path.join(root or ROOT, "vendor", platform_tag())
     return [p for p in (os.path.join(base, tag), os.path.join(base, "common"))
@@ -56,7 +53,7 @@ def have_parsers():
 
 
 def activate(root=None):
-    """Подключает парсеры из vendor, если в системе их нет."""
+    """Put the bundled parsers on sys.path unless the system has its own."""
     if have_parsers():
         return True
     for p in paths(root):
@@ -66,17 +63,15 @@ def activate(root=None):
 
 
 def web_asset(*parts):
-    """Файл из vendor/web (библиотеки редактора) или None, если его нет.
+    """A file from vendor/web (editor libraries, platform independent) or None.
 
-    Они одни на все платформы. В собранном exe папка лежит внутри архива
-    PyInstaller, и ROOT указывает как раз туда.
+    In a PyInstaller build ROOT points inside the bundle, so this still works.
     """
     p = os.path.join(ROOT, "vendor", "web", *parts)
     return p if os.path.isfile(p) else None
 
 
 def install_hint():
-    """Понятное объяснение, что делать, если парсеров нет."""
     req = os.path.join(ROOT, "requirements.txt")
     head = ("Не найдены парсеры tree-sitter.\n"
             f"Python {sys.version.split()[0]}, платформа {platform_tag()}.\n")
