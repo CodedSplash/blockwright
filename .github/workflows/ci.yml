@@ -50,3 +50,45 @@ jobs:
         with:
           name: charts-${{ matrix.os }}
           path: out
+
+  build-binary:
+    name: single file · ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows x64
+            built: dist/blockwright.exe
+          - os: ubuntu-22.04
+            label: Linux x86-64
+            built: dist/blockwright
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Build
+        run: python build.py
+
+      # Собранный файл должен работать сам по себе: ни Python, ни vendor рядом
+      - name: Run the binary on the example
+        shell: bash
+        run: |
+          "${{ matrix.built }}" examples -o binary-out --no-ui
+          test -f binary-out/index.html
+          test -f binary-out/grades__main.svg
+          grep -q "Вывод:" binary-out/grades__main.svg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}
+          path: ${{ matrix.built }}
+          if-no-files-found: error
