@@ -23,8 +23,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      # Никаких pip install: проверяем, что парсеры из vendor/ действительно
-      # подхватываются и утилита работает сразу после клонирования.
+      # No pip install: the bundled parsers in vendor/ must be enough.
       - name: Build charts for the bundled example
         run: python -m blockwright examples -o out --no-ui
 
@@ -39,8 +38,8 @@ jobs:
           if missing:
               sys.exit("missing: " + ", ".join(missing))
           page = (out / "index.html").read_text(encoding="utf-8")
-          # AVOID_WASM — трассировщик линий из vendor/web встроен в страницу
-          for marker in ("<svg", "Вывод:", "blockwright", "AvoidModule", "AVOID_WASM"):
+          # AVOID_WASM: the connector router from vendor/web is inlined
+          for marker in ("<svg", "Вывод:", "blockwright", "AvoidModule", "AVOID_WASM", 'id="btnMore"'):
               if marker not in page:
                   sys.exit(f"album looks broken: {marker!r} not found")
           print("ok:", ", ".join(p.name for p in sorted(out.iterdir())))
@@ -79,7 +78,7 @@ jobs:
       - name: Build
         run: python build.py
 
-      # Собранный файл должен работать сам по себе: ни Python, ни vendor рядом
+      # the binary must run on its own, without Python or vendor/ next to it
       - name: Run the binary on the example
         shell: bash
         run: |

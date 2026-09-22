@@ -1,17 +1,10 @@
-"""Альбом-редактор блок-схем (index.html).
+"""The album: a single-file chart editor (index.html).
 
-Одностраничное приложение, которому не нужны ни сеть, ни сервер: в файл
-кладётся модель каждой схемы (фигуры, линии, подписи), а браузер рисует
-её сам тем же алгоритмом, что и Python. Линии при правке прокладывает
-libavoid (Adaptagrams) — он встроен в страницу из vendor/web. Это даёт
-полноценный редактор:
-
-* перетаскивание блоков и изменение их размеров, линии обходят блоки;
-* правка узлов линии, перепривязка концов к другим блокам;
-* создание схем с нуля — палитра блоков, инструмент связи, подписи;
-* отмена/повтор, копирование, выравнивание по сетке;
-* экспорт в SVG (аккуратное дерево слоёв для Figma) и PNG, печать;
-* сохранение в браузере и выгрузка всего проекта одним .json-файлом.
+The page needs no network or server. It embeds the model of every chart and
+redraws it with the same algorithm as the Python side; connectors are routed
+by libavoid, inlined from vendor/web. Blocks can be moved and resized,
+connectors edited and re-attached, charts drawn from scratch, and everything
+exported as SVG or PNG or saved as a project file.
 """
 
 import base64
@@ -38,7 +31,9 @@ body[data-theme="dark"]{
 }
 html,body{height:100%}
 body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);
-     font-size:14px;overflow:hidden;-webkit-user-select:none;user-select:none}
+     font-size:14px;overflow:hidden;-webkit-user-select:none;user-select:none;
+     display:flex;flex-direction:column;height:100vh;height:100dvh;
+     -webkit-tap-highlight-color:transparent;--top:52px}
 button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:var(--panel);border:1px solid var(--line);
        border-radius:8px;padding:6px 11px}
@@ -48,13 +43,16 @@ button.primary:hover{background:#265fb8}
 button.on{background:var(--accent-soft);border-color:#b7d0f2;color:#1d4f9e}
 button.ghost{border-color:transparent;background:transparent}
 button:disabled{opacity:.4;cursor:default}
-.topbar{height:52px;display:flex;align-items:center;gap:8px;padding:0 14px;
-        background:var(--panel);border-bottom:1px solid var(--line);z-index:20}
+.topbar{flex:0 0 auto;height:var(--top);display:flex;align-items:center;gap:8px;
+        padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));
+        background:var(--panel);border-bottom:1px solid var(--line);z-index:45}
+.brand{min-width:0}
+.more{display:flex;align-items:center;gap:8px}
 .brand{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand .sub{color:var(--muted);font-weight:400;font-size:12.5px}
 .grow{flex:1 1 auto}.group{display:flex;gap:6px;align-items:center}
 .sep{width:1px;height:24px;background:var(--line);margin:0 3px}
-.layout{display:flex;height:calc(100vh - 52px)}
+.layout{display:flex;flex:1 1 auto;min-height:0}
 aside{background:var(--panel);display:flex;flex-direction:column;min-height:0}
 aside.nav{flex:0 0 250px;border-right:1px solid var(--line)}
 aside.insp{flex:0 0 280px;border-left:1px solid var(--line);padding:12px 14px;
@@ -119,7 +117,6 @@ svg .marquee{fill:rgba(47,111,208,.10);stroke:var(--accent);stroke-width:1;
        background:#111820;color:#fff;padding:9px 16px;border-radius:9px;font-size:13px;
        opacity:0;pointer-events:none;transition:.2s;z-index:60}
 .toast.show{opacity:1;transform:translate(-50%,0)}
-/* новые мелочи интерфейса */
 .check{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--muted);
        font-size:12.5px;padding:0 4px;cursor:pointer}
 .check input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
@@ -128,7 +125,7 @@ button.danger{color:var(--danger)}
 .navfoot{padding:8px 10px;border-top:1px solid var(--line)}
 .navfoot button{width:100%}
 .toolbar .name{cursor:text}
-.only-narrow{display:none}
+.only-narrow,.insp-close{display:none}
 
 @media print{
   body{overflow:visible;background:#fff}
@@ -139,33 +136,72 @@ button.danger{color:var(--danger)}
   svg .handle,svg .sel-outline,svg .guide,svg .marquee{display:none}
 }
 
-/* --- адаптив --- */
+.scrim{position:fixed;inset:0;background:rgba(10,15,20,.32);z-index:35;display:none}
+body.nav-open .scrim,body.more-open .scrim{display:block}
+.insp .ihead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.insp .ihead h3{margin:0}
+
 @media (max-width:1360px){ button.wide{display:none} }
 @media (max-width:1180px){
   aside.nav{flex-basis:210px} aside.insp{flex-basis:250px}
   .toolbar .meta{display:none}
 }
 @media (max-width:980px){
-  body.edit aside.insp,aside.insp{position:fixed;right:0;top:52px;bottom:0;width:270px;
-    z-index:30;box-shadow:var(--shadow)}
-  aside.insp{display:block}
   .brand .sub{display:none}
+  aside.insp{position:fixed;right:0;top:var(--top);bottom:0;width:270px;z-index:30;
+    box-shadow:var(--shadow);display:none}
+  body.insp-open aside.insp{display:block}
+  .insp-close{display:inline-block}
 }
 @media (max-width:820px){
   .only-narrow{display:inline-block}
-  aside.nav{position:fixed;left:0;top:52px;bottom:0;width:250px;z-index:40;
+  .topbar{gap:6px}
+  .topbar>.sep{display:none}
+  .more{display:none;position:fixed;top:calc(var(--top) + 6px);
+    right:max(8px,env(safe-area-inset-right));width:min(240px,calc(100vw - 16px));
+    max-height:calc(100dvh - var(--top) - 16px);overflow:auto;
+    flex-direction:column;align-items:stretch;gap:8px;padding:10px;z-index:50;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow)}
+  body.more-open .more{display:flex}
+  .more .group{flex-direction:column;align-items:stretch}
+  .more .sep{width:auto;height:1px;margin:2px 0}
+  .more button.wide{display:block}
+  .more select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;
+    background:var(--field)}
+  .more .check{padding:4px 2px}
+  aside.nav{position:fixed;left:0;top:var(--top);bottom:0;width:min(280px,86vw);z-index:40;
     transform:translateX(-102%);transition:transform .18s;box-shadow:var(--shadow)}
   body.nav-open aside.nav{transform:none}
-  aside.insp{display:none}
+  aside.insp{display:block;top:auto;left:0;right:0;width:auto;
+    max-height:min(55dvh,440px);border-left:0;border-top:1px solid var(--line);
+    border-radius:14px 14px 0 0;padding-bottom:max(14px,env(safe-area-inset-bottom));
+    transform:translateY(105%);transition:transform .18s;visibility:hidden}
+  body.insp-open aside.insp{transform:none;visibility:visible}
+  .toolbar{padding:0 8px;gap:5px}
   .palette{flex-basis:46px}
   .palette button{width:36px;height:36px}
   .stage{padding:12px}
+  .sheet{padding:10px}
+  .toast{bottom:max(24px,env(safe-area-inset-bottom))}
 }
-@media (max-width:560px){
-  .topbar{height:auto;flex-wrap:wrap;padding:6px 8px;gap:5px}
-  .layout{height:auto;min-height:calc(100vh - 92px)}
-  .sep,.zoomval{display:none}
-  .brand{font-size:13px;max-width:52%}
+@media (max-width:820px) and (orientation:landscape) and (max-height:520px){
+  aside.insp{top:var(--top);left:auto;width:min(300px,50vw);max-height:none;
+    border-top:0;border-left:1px solid var(--line);border-radius:0;
+    transform:translateX(105%)}
+}
+@media (max-width:480px){
+  .topbar{padding:0 8px;gap:4px}
+  .topbar button{padding:6px 9px}
+  .brand{font-size:13px}
+  .zoomval,#zoom100,#btnRename{display:none}
+  .palette{flex-basis:42px}
+  .palette button{width:34px;height:34px}
+  .stage{padding:8px}
+}
+@media (pointer:coarse){
+  svg .edge-hit{stroke-width:22}
+  .tree a{padding:9px 10px}
 }
 """
 
@@ -176,7 +212,7 @@ const MARGIN=26, TITLE_H=34, ARROW_LEN=9, ARROW_HALF=3.6, GRID=5, PAD=60;
 const STUB=20, CORNER=6;
 const MONO="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', 'Courier New', monospace";
 const UI="Segoe UI, 'Noto Sans', Arial, sans-serif";
-/* палитры схемы: те же, что в blockwright/render.py */
+/* chart palettes, kept in sync with blockwright/render.py */
 const THEMES={
   light:{stroke:"#1f2933",ink:"#10151b",bg:"#ffffff",
          fill:{process:"#ffffff",io:"#eef4ff",decision:"#fff6e5",terminator:"#e9f3ec",
@@ -192,7 +228,7 @@ const KIND_RU={process:"Процесс",io:"ВводВывод",decision:"Реш
 const KINDS=["terminator","process","io","decision","predefined","preparation","connector"];
 const STORE='blockwright.v1';
 
-/* ---------- переводы интерфейса ---------- */
+/* ---------- i18n ---------- */
 const I18N={
  ru:{
   app_title:"Блок-схемы: {0}", charts_count:"схем: {0}", my_charts:"Мои схемы",
@@ -207,6 +243,7 @@ const I18N={
   b_del_t:"Сбросить правки схемы или удалить свою схему",
   b_rename_t:"Переименовать схему", b_theme_t:"Светлая / тёмная тема",
   b_lang_t:"Язык интерфейса", b_menu_t:"Список схем",
+  b_more_t:"Экспорт и настройки", b_close:"Закрыть",
   z_out:"Уменьшить", z_in:"Увеличить", z_fit:"Вписать",
   cap_title:"заголовок", cap_title_t:"Добавлять заголовок в экспортируемый файл",
   kind_terminator:"Начало / конец", kind_process:"Процесс", kind_io:"Ввод-вывод",
@@ -257,6 +294,7 @@ const I18N={
   b_del_t:"Reset chart edits or delete your own chart",
   b_rename_t:"Rename the chart", b_theme_t:"Light / dark theme",
   b_lang_t:"Interface language", b_menu_t:"Chart list",
+  b_more_t:"Export and settings", b_close:"Close",
   z_out:"Zoom out", z_in:"Zoom in", z_fit:"Fit",
   cap_title:"title", cap_title_t:"Include the title in the exported file",
   kind_terminator:"Terminator", kind_process:"Process", kind_io:"Input / output",
@@ -303,7 +341,7 @@ function t(key){
 }
 const KIND_LABEL=k=>t('kind_'+k);
 
-/* ---------- текст и размеры ---------- */
+/* ---------- text and sizes ---------- */
 function norm(s){return String(s==null?'':s).replace(/[\r\n\t]/g,' ')
   .replace(/\s+/g,' ').replace(/\s*,\s*/g,', ').trim();}
 function hardSplit(tok,w){
@@ -351,7 +389,7 @@ function slug(t,lim){lim=lim||28;
 let _uid=0; const uid=p=>p+'_'+(Date.now()%100000).toString(36)+(_uid++).toString(36);
 const clone=o=>JSON.parse(JSON.stringify(o));
 
-/* ---------- отрисовка ---------- */
+/* ---------- rendering ---------- */
 function bbox(m){
   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
   const put=(x,y)=>{if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;};
@@ -391,7 +429,6 @@ function cleanPts(pts){
     if(Math.abs(p[0]-q[0])>.01||Math.abs(p[1]-q[1])>.01)cl.push(p);}
   return cl;
 }
-/* полилиния со скруглёнными углами — углы 90° выглядят мягче и ровнее */
 function roundPath(pts,r){
   if(pts.length<3)
     return 'M'+pts.map(p=>n(p[0])+','+n(p[1])).join(' L');
@@ -427,7 +464,7 @@ function edgeSvg(e){
 function labelSvg(l){
   return `<text x="${n(l.x)}" y="${n(l.y)}" text-anchor="${l.anchor}" font-family="${UI}" font-size="${LBL}" fill="${TH().ink}">${esc(l.text)}</text>`;
 }
-/* view=null -> поля по содержимому (экспорт); иначе фиксированная область (холст) */
+/* view=null fits the margins to the content (export); otherwise the canvas area is fixed */
 function renderSVG(m,opt){
   opt=opt||{};
   const b=opt.view||bbox(m), title=opt.title||null;
@@ -460,7 +497,7 @@ function renderSVG(m,opt){
   return{svg:head+'\n'+parts.join('\n')+'\n</svg>',w:W,h:H,dx,dy};
 }
 
-/* ---------- модель: привязки и маршруты ---------- */
+/* ---------- model: attachments and routes ---------- */
 function anchors(s){return{top:[s.x+s.w/2,s.y],bottom:[s.x+s.w/2,s.y+s.h],
   left:[s.x,s.y+s.h/2],right:[s.x+s.w,s.y+s.h/2]};}
 function anchorPt(m,ref){
@@ -483,7 +520,7 @@ function hydrate(m){
   }
   return m;
 }
-/* подпись считается «приклеенной» к вершине блока, если стоит вплотную к ней */
+/* a label right next to a block's anchor is attached to it */
 function nearestAnchor(m,l){
   let best=null,bd=34;
   for(const s of m.shapes){
@@ -506,21 +543,21 @@ function findAnchor(m,pt,tol){
   }
   return best;
 }
-/* убирает узлы, лежащие на прямой между соседями */
+/* drop vertices that lie on the line between their neighbours */
 function simplify(e){
   const p=e.points;
   for(let i=p.length-2;i>0;i--){
-    if((i===1&&e.from)||(i===p.length-2&&e.to))continue;   // прямой подход к блоку
+    if((i===1&&e.from)||(i===p.length-2&&e.to))continue;
     const a=p[i-1],b=p[i],c=p[i+1];
     if((Math.abs(a[0]-b[0])<.6&&Math.abs(b[0]-c[0])<.6)||
        (Math.abs(a[1]-b[1])<.6&&Math.abs(b[1]-c[1])<.6))p.splice(i,1);
   }
 }
 const NORMAL={top:[0,-1],bottom:[0,1],left:[-1,0],right:[1,0]};
-/* Линия обязана подходить к блоку строго по нормали к его стороне и иметь
-   прямой участок: иначе стрелка «косит», а линия норовит уйти назад сквозь
-   фигуру. Если подход испорчен, ближний кусок прокладывается заново:
-   выход по нормали -> поворот -> ближайший «живой» узел линии. */
+/* An edge must meet a block square to its side with a straight stub, or the
+   arrowhead tilts and the line doubles back through the shape. A broken
+   approach is rebuilt: out along the normal, one turn, then the nearest
+   vertex that is still valid. */
 function fixEnd(e,isFrom){
   const ref=isFrom?e.from:e.to; if(!ref)return;
   const nrm=NORMAL[ref.port]; if(!nrm||e.points.length<2)return;
@@ -529,9 +566,9 @@ function fixEnd(e,isFrom){
   const p=e.points[idx], q=e.points[j];
   const along=(q[0]-p[0])*nrm[0]+(q[1]-p[1])*nrm[1];
   const side=(q[0]-p[0])*nrm[1]-(q[1]-p[1])*nrm[0];
-  if(Math.abs(side)<.6&&along>=STUB-.6)return;      // подход уже правильный
-  let k=j;                                          // опорный узел
-  if(along<0&&e.points.length>2)k=isFrom?2:last-2;  // сосед оказался позади
+  if(Math.abs(side)<.6&&along>=STUB-.6)return;
+  let k=j;
+  if(along<0&&e.points.length>2)k=isFrom?2:last-2;  // the neighbour ended up behind the stub
   const target=e.points[k];
   const s=[r2(p[0]+nrm[0]*STUB),r2(p[1]+nrm[1]*STUB)];
   const vert=(nrm[0]===0);
@@ -542,10 +579,9 @@ function fixEnd(e,isFrom){
   if(isFrom)e.points.splice(1,k-1,...ins);
   else e.points.splice(k+1,last-k-1,...ins.reverse());
 }
-/* Запасной путь, когда libavoid недоступен: конец линии переезжает к новой
-   точке, соседний узел подтягивается следом, если стоял с ним на одной
-   прямой (и если это не чужой привязанный конец), а подход к блоку
-   выправляется по нормали. */
+/* Fallback without libavoid: the end moves to its new point, the next vertex
+   follows when it was in line with it (unless it is another edge's attached
+   end), and the approach is straightened. */
 function followEnd(e,idx,np){
   const old=e.points[idx].slice();
   const dx=np[0]-old[0], dy=np[1]-old[1];
@@ -566,7 +602,7 @@ function followShapes(m,e){
   fixEnd(e,true);fixEnd(e,false);simplify(e);
 }
 
-/* ---------- геометрия линий ---------- */
+/* ---------- edge geometry ---------- */
 function nearestOn(pts,p){
   let best=null;
   for(let i=0;i+1<pts.length;i++){
@@ -584,7 +620,7 @@ function freeEnds(e){
   if(!e.to&&last>0)out.push(last);
   return out;
 }
-/* пересекает ли ломаная блок (отрезок против прямоугольника, Лианг — Барски) */
+/* does the polyline cross the block (Liang-Barsky clipping) */
 function crosses(pts,s){
   const x0=s.x+1,y0=s.y+1,x1=s.x+s.w-1,y1=s.y+s.h-1;
   for(let i=0;i+1<pts.length;i++){
@@ -600,9 +636,8 @@ function crosses(pts,s){
   }
   return false;
 }
-/* Раскладка рисует одну связь несколькими кусками: «шина» ветвления, стык
-   в точке на другой линии. Такие куски, соединённые свободными концами,
-   образуют одну конструкцию. */
+/* The layout draws one logical connection as several pieces (a branch bus,
+   a joint on another edge); pieces joined by free ends form one group. */
 function edgeGroups(m){
   const E=m.edges, par=E.map((_,i)=>i);
   const f=i=>par[i]===i?i:(par[i]=f(par[i]));
@@ -612,7 +647,7 @@ function edgeGroups(m){
   E.forEach((e,i)=>{const k=f(i);if(!g.has(k))g.set(k,[]);g.get(k).push(e);});
   return [...g.values()];
 }
-/* свободные концы других линий, лежащие на перекладываемых */
+/* free ends of other edges that sit on the edges being rerouted */
 function junctions(m,list){
   const out=[];
   for(const b of m.edges)for(const idx of freeEnds(b)){
@@ -628,18 +663,15 @@ function portAt(s,p){
   return best;
 }
 
-/* ---------- трассировка: libavoid ----------
-   Маршруты считает libavoid из Adaptagrams — тот же трассировщик, что в
-   Inkscape: ортогональные линии обходят блоки, выходят и входят строго по
-   нормали к стороне, а идущие рядом расходятся на равный шаг. Библиотека
-   собрана в WebAssembly (vendor/web/libavoid) и встроена в страницу, так
-   что работает и с file://, и без сети. Если браузер её не загрузил,
-   действует простой запасной алгоритм (followShapes / autoRoute). */
+/* ---------- routing: libavoid ----------
+   Orthogonal routes around blocks, square to the block sides, with parallel
+   segments nudged apart. If the WebAssembly module fails to load, the simple
+   fallback (followShapes / autoRoute) is used. */
 let AV=null;
 const PORTS=['top','bottom','left','right'];
 const PIN={top:[.5,0,1],bottom:[.5,1,2],left:[0,.5,4],right:[1,.5,8]};  // x, y, ConnDir
-const CLS={top:10,bottom:11,left:12,right:13,out:20,in:21};   // 1 у libavoid занят
-const AV_BUF=12, AV_SIDE=40;     // отступ от блоков; «цена» выхода вбок
+const CLS={top:10,bottom:11,left:12,right:13,out:20,in:21};   // class 1 is reserved by libavoid
+const AV_BUF=12, AV_SIDE=40;     // clearance around blocks; penalty for leaving by a side
 function loadRouter(){
   if(AV||typeof AvoidModule!=='function'||typeof AVOID_WASM!=='string'||
      typeof WebAssembly!=='object')return Promise.resolve(AV);
@@ -654,7 +686,7 @@ function loadRouter(){
 }
 const straightOnly=pts=>pts.length>1&&pts.every((p,i)=>!i||
   Math.abs(p[0]-pts[i-1][0])<.6||Math.abs(p[1]-pts[i-1][1])<.6);
-/* «шпилька»: линия доходит до точки и возвращается назад по той же прямой */
+/* a spike: the line reaches a point and comes back along itself */
 function spiky(pts){
   for(let i=1;i+1<pts.length;i++){
     const a=pts[i-1],b=pts[i],c=pts[i+1];
@@ -663,10 +695,10 @@ function spiky(pts){
   }
   return false;
 }
-/* Опорные точки (checkpoints) — изломы прежнего маршрута: линия, которую
-   задел блок, обходит его рядом, а не уходит «кратчайшим» путём через всю
-   схему. Излом у сдвинутого конца и изломы позади него отбрасываются —
-   иначе линия ломалась бы назад. moved — индексы сдвинутых свободных концов. */
+/* Checkpoints are the bends of the previous route, so an edge that a block
+   merely brushes detours locally instead of taking a new path across the
+   chart. Bends at or behind a moved end are dropped, or the edge would fold
+   back. moved: indices of free ends that moved. */
 function checkpoints(m,e,moved){
   const P=e.points, last=P.length-1;
   if(last<2)return [];
@@ -685,14 +717,14 @@ function checkpoints(m,e,moved){
     const p=P[i];
     if(!m.shapes.some(s=>p[0]>s.x-B&&p[0]<s.x+s.w+B&&p[1]>s.y-B&&p[1]<s.y+s.h+B))out.push(p);
   }
-  /* ближайшие к сдвинутому блоку точки не должны оказаться позади его стороны */
+  /* points next to a moved block must not end up behind its side */
   const behind=(p,g)=>g&&(p[0]-g[0][0])*g[1][0]+(p[1]-g[0][1])*g[1][1]<AV_BUF;
   while(out.length&&behind(out[0],guard[0]))out.shift();
   while(out.length&&behind(out[out.length-1],guard[1]))out.pop();
   return out;
 }
-/* reqs: [{from,to,a,b}], from/to — {id,cls} или null (тогда конец — точка a/b).
-   Возвращает маршруты; null там, где libavoid пути не нашёл. */
+/* reqs: [{from,to,a,b}]; from/to is {id,cls}, or null for a free end at a/b.
+   Returns the routes, null where libavoid found none. */
 function avRoute(m,reqs,buf){
   const A=AV, P=A.RoutingParameter, tmp=[], T=o=>(tmp.push(o),o);
   const multi=reqs.some(q=>[q.from,q.to].some(r=>r&&(r.cls===CLS.out||r.cls===CLS.in)));
@@ -701,8 +733,8 @@ function avRoute(m,reqs,buf){
     R.setRoutingParameter(P.shapeBufferDistance,buf||AV_BUF);
     R.setRoutingParameter(P.idealNudgingDistance,10);
     R.setRoutingParameter(P.segmentPenalty,50);
-    /* в блок-схеме линии сходятся в середину стороны (вход цикла и
-       обратная связь), поэтому концы у блоков не раздвигаются */
+    /* flowchart edges share the middle of a side (loop entry and back edge),
+       so their ends must not be spread apart */
     R.setRoutingOption(A.RoutingOption.nudgeOrthogonalSegmentsConnectedToShapes,false);
     const refs={};
     for(const s of m.shapes){
@@ -730,7 +762,7 @@ function avRoute(m,reqs,buf){
       }
       return c;});
     R.processTransaction();
-    /* конец маршрута обязан стоять на точке привязки блока или на своей точке */
+    /* a route must end exactly on the block anchor or on its own point */
     const S=id=>m.shapes.find(s=>s.id===id);
     const near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1])<.6;
     const lands=(r,q,p)=>r&&refs[r.id]?Object.values(anchors(S(r.id))).some(a=>near(a,p))
@@ -748,12 +780,12 @@ function avRoute(m,reqs,buf){
 }
 function avRun(m,reqs,buf){
   if(!AV||!reqs.length)return null;
-  try{return avRoute(m,reqs,buf);}catch(e){AV=null;return null;}   // сломался — дальше без него
+  try{return avRoute(m,reqs,buf);}catch(e){AV=null;return null;}   // broken: use the fallback from now on
 }
-/* концы линии для трассировщика.
-   mode: 'keep' — те же стороны блоков; 'free' — сторону выбирает libavoid
-   (выход снизу или вбок, вход сверху или вбок; у ромба стороны значат
-   «Да»/«Нет» и не меняются); 'guess' — стороны по простой эвристике. */
+/* Edge ends for the router.
+   mode 'keep': same block sides; 'free': libavoid picks (out of the bottom or
+   a side, in at the top or a side; decision sides mean Yes/No and stay);
+   'guess': sides from a simple heuristic. */
 function endsOf(m,e,mode){
   const P=e.points, S=id=>m.shapes.find(s=>s.id===id);
   let fp=e.from&&e.from.port, tp=e.to&&e.to.port;
@@ -769,9 +801,8 @@ function endsOf(m,e,mode){
   };
   return{from:ref(e.from,fp,CLS.out),to:ref(e.to,tp,CLS.in),a:P[0],b:P[P.length-1]};
 }
-/* Отступ линий от блоков. Если блок придвинут к соседу теснее двух
-   отступов, линия между ними не пролезла бы и ушла в большой обход —
-   тогда отступ уменьшается до половины зазора. */
+/* Clearance around blocks, reduced to half the gap when two blocks are closer
+   than two clearances, so an edge can still pass between them. */
 function bufferFor(m,list){
   const ids=new Set(list.flatMap(e=>[e.from,e.to]).filter(Boolean).map(r=>r.id));
   let gap=Infinity;
@@ -780,17 +811,16 @@ function bufferFor(m,list){
     for(const b of m.shapes){
       if(b===a)continue;
       const dx=Math.max(b.x-a.x-a.w,a.x-b.x-b.w), dy=Math.max(b.y-a.y-a.h,a.y-b.y-b.h);
-      const d=Math.max(dx,dy);             // зазор между прямоугольниками
+      const d=Math.max(dx,dy);
       if(d>=0)gap=Math.min(gap,d);
     }
   }
   return Math.max(3,Math.min(AV_BUF,Math.floor(gap/2)-1));
 }
-/* Прокладывает линии заново.
-   opt.free  — разрешить смену сторон (кнопка «Проложить заново», новая
-               связь); иначе стороны блоков сохраняются;
-   opt.fresh — линия новая: к ней ещё ничего не примыкает;
-   opt.moved — Map(линия -> индексы свободных концов, которые сдвинулись). */
+/* Reroute edges.
+   opt.free  - sides may change (the Reroute button, a new connector);
+   opt.fresh - a new edge that nothing is joined to yet;
+   opt.moved - Map(edge -> indices of free ends that moved). */
 function routeEdges(m,list,opt){
   opt=opt||{};
   const free=!!opt.free, depth=opt.depth||0, moved=opt.moved;
@@ -801,9 +831,9 @@ function routeEdges(m,list,opt){
   const reqs=list.map(e=>endsOf(m,e,free?'free':'keep'));
   if(!free)reqs.forEach((q,i)=>{q.cps=checkpoints(m,list[i],moved&&moved.get(list[i]));});
   const res=avRun(m,reqs,buf)||[];
-  /* где не вышло — ещё попытки: без опорных точек (при свободном выборе —
-     со сторонами по эвристике: libavoid порой спотыкается на нём), затем
-     с малым отступом — когда блоки стоят почти вплотную */
+  /* retry failures without checkpoints (with heuristic sides when free, which
+     libavoid sometimes trips over), then with a small clearance for blocks
+     that almost touch */
   const retry=pad=>{
     const bad=list.map((e,i)=>res[i]?-1:i).filter(i=>i>=0);
     if(!AV||!bad.length)return;
@@ -822,8 +852,8 @@ function routeEdges(m,list,opt){
     }else if(free&&e.from&&e.to)legacyReroute(m,e);
     else followShapes(m,e);
   });
-  /* примыкавшие линии дотягиваются до нового хода — стык не отрывается
-     (если он не лежит и на какой-то другой линии: тогда держится за неё) */
+  /* joined edges follow the new route so the joint stays attached, unless it
+     also lies on another edge and holds on to that one */
   const again=new Map();
   for(const g of glue){
     const p=g.edge.points[g.idx];
@@ -846,14 +876,13 @@ function legacyReroute(m,e){
   e.from={id:a.id,port:r.from}; e.to={id:b.id,port:r.to};
   return true;
 }
-/* Блоки shapeIds сдвинулись или изменили размер — линии следуют за ними.
-   opt.delta — общий сдвиг: конструкция, все блоки которой едут вместе,
-   просто переносится, а не перекладывается. opt.skip — линии, которые
-   уже сдвинуты вручную. */
+/* Edges follow blocks that moved or were resized.
+   opt.delta - common offset: a construct whose blocks all move together is
+   translated rather than rerouted. opt.skip - edges already moved by hand. */
 function syncEdges(m,shapeIds,opt){
   opt=opt||{};
   const ids=new Set(shapeIds), skip=new Set(opt.skip||[]);
-  /* подписи «Да»/«Нет» приклеены к вершинам блока и едут вместе с ним */
+  /* Yes/No labels are attached to block anchors and move with the block */
   for(const l of m.labels){
     if(!l.near||!ids.has(l.near.id))continue;
     const s=m.shapes.find(x=>x.id===l.near.id); if(!s)continue;
@@ -876,7 +905,6 @@ function syncEdges(m,shapeIds,opt){
     moved.some(s=>crosses(e.points,s))));
   routeEdges(m,list);
 }
-/* проложить линию заново: концы у блоков, стороны — какие удобнее */
 function rerouteEdge(m,e,fresh){
   if(!e.from||!e.to)return false;
   if(!m.shapes.some(s=>s.id===e.from.id)||!m.shapes.some(s=>s.id===e.to.id))return false;
@@ -901,7 +929,7 @@ function autoRoute(m,a,b){
   return{pts:[p1,[mx,p1[1]],[mx,p2[1]],p2],from:right?'right':'left',
          to:right?'left':'right'};
 }
-/* «разрезать» схему по горизонтали и раздвинуть — когда блок стал выше */
+/* cut the chart horizontally and push the lower part down after a block grew */
 function shiftBelow(m,threshold,delta){
   if(!delta)return;
   for(const s of m.shapes)if(s.y>=threshold-.5)s.y=r2(s.y+delta);
@@ -927,7 +955,7 @@ function emptyDoc(name){
 """
 
 JS_APP = r"""
-/* ---------- состояние ---------- */
+/* ---------- state ---------- */
 const $=s=>document.querySelector(s);
 let docs={}, custom=[], dirty=new Set(), names={}, cur=null, view=null, zoom=1;
 let exportTitle=true;
@@ -938,8 +966,8 @@ function loadStore(){
   try{const raw=JSON.parse(localStorage.getItem(STORE)||'{}');
     docs=raw.docs||{}; custom=raw.custom||[]; dirty=new Set(raw.dirty||[]);
     names=raw.names||{};
-    LANG=raw.lang||DATA.lang||LANG;          // выбор пользователя важнее умолчаний,
-    THEME=raw.theme||DATA.theme||THEME;      // а умолчания приходят из командной строки
+    LANG=raw.lang||DATA.lang||LANG;          // the viewer's choice wins over the defaults,
+    THEME=raw.theme||DATA.theme||THEME;      // which come from the command line
     if(raw.exportTitle!==undefined)exportTitle=!!raw.exportTitle;}
   catch(e){docs={};custom=[];dirty=new Set();names={};
            LANG=DATA.lang||LANG;THEME=DATA.theme||THEME;}
@@ -947,7 +975,7 @@ function loadStore(){
   if(!THEMES[THEME])THEME='light';
 }
 function saveStore(){
-  /* храним только то, что правили вручную, и свои схемы */
+  /* store only edited and hand-made charts */
   const keep={}, mine=new Set(custom.map(c=>c.anchor));
   for(const k of Object.keys(docs))if(dirty.has(k)||mine.has(k))keep[k]=docs[k];
   try{localStorage.setItem(STORE,JSON.stringify(
@@ -982,12 +1010,12 @@ function undo(){if(!hist.length)return;future.push(clone(model()));
 function redo(){if(!future.length)return;hist.push(clone(model()));
   docs[cur]=future.pop();clearSel();commit();}
 
-/* ---------- выделение ---------- */
+/* ---------- selection ---------- */
 function clearSel(){sel={shapes:new Set(),edges:new Set(),labels:new Set()};}
 function selCount(){return sel.shapes.size+sel.edges.size+sel.labels.size;}
 function selectOnly(kind,id){clearSel();sel[kind].add(id);}
 
-/* ---------- отрисовка холста ---------- */
+/* ---------- canvas ---------- */
 function ensureView(m,reset){
   const b=bbox(m);
   if(reset||!view){view={x0:b.x0-PAD,y0:b.y0-PAD,x1:b.x1+PAD,y1:b.y1+PAD};return;}
@@ -999,34 +1027,51 @@ function draw(){
   const out=renderSVG(m,{interactive:true,view,name:nameOf(meta())});
   $('#sheet').innerHTML=out.svg;
   const svg=$('#sheet svg');
-  svg.style.width=(out.w*zoom)+'px'; svg.style.height=(out.h*zoom)+'px';
-  $('#zoomVal').textContent=Math.round(zoom*100)+'%';
+  size={w:out.w,h:out.h}; setZoom(zoom);
   drawUI();
   svg.addEventListener('pointerdown',onDown);
   svg.addEventListener('pointermove',onMove);
   svg.addEventListener('pointerup',onUp);
+  svg.addEventListener('pointercancel',onUp);
   svg.addEventListener('dblclick',onDbl);
 }
+/* zooming only rescales the SVG element, the scene is not rebuilt */
+let size={w:0,h:0};
+function setZoom(z){
+  zoom=Math.max(.2,Math.min(3,z));
+  const svg=$('#sheet svg');
+  if(svg){svg.style.width=(size.w*zoom)+'px'; svg.style.height=(size.h*zoom)+'px';}
+  $('#zoomVal').textContent=Math.round(zoom*100)+'%';
+}
+function fitZoom(max){
+  ensureView(model(),true);
+  const out=renderSVG(model(),{view}), st=$('#stage'), cs=getComputedStyle(st);
+  const room=st.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)
+             -2*parseFloat(getComputedStyle($('#sheet')).paddingLeft);
+  return Math.max(.2,Math.min(max,room/out.w));
+}
+const narrow=()=>matchMedia('(max-width:820px)').matches;
+const coarse=()=>matchMedia('(pointer:coarse)').matches;
 function ui(){return $('#__ui');}
 function drawUI(){
   const g=ui(); if(!g)return;
-  const m=model(); const parts=[];
+  const m=model(); const parts=[], k=coarse()?1.8:1, hs=4*k;
   for(const id of sel.shapes){
     const s=m.shapes.find(x=>x.id===id); if(!s)continue;
     parts.push(`<rect class="sel-outline" x="${n(s.x-4)}" y="${n(s.y-4)}" width="${n(s.w+8)}" height="${n(s.h+8)}" rx="3"/>`);
     if(sel.shapes.size===1){
       const a=[[s.x+s.w,s.y+s.h/2,'e'],[s.x+s.w/2,s.y+s.h,'s'],[s.x+s.w,s.y+s.h,'se']];
       for(const [x,y,dir] of a)
-        parts.push(`<rect class="handle" data-resize="${dir}" x="${n(x-4)}" y="${n(y-4)}" width="8" height="8" rx="2"/>`);
+        parts.push(`<rect class="handle" data-resize="${dir}" x="${n(x-hs)}" y="${n(y-hs)}" width="${n(2*hs)}" height="${n(2*hs)}" rx="2"/>`);
     }
   }
   for(const id of sel.edges){
     const e=m.edges.find(x=>x.id===id); if(!e)continue;
     e.points.forEach((p,i)=>{
       const bound=(i===0&&e.from)||(i===e.points.length-1&&e.to);
-      parts.push(`<circle class="handle${bound?' bound':''}" data-vtx="${esc(e.id)}:${i}" cx="${n(p[0])}" cy="${n(p[1])}" r="5"/>`);
+      parts.push(`<circle class="handle${bound?' bound':''}" data-vtx="${esc(e.id)}:${i}" cx="${n(p[0])}" cy="${n(p[1])}" r="${n(5*k)}"/>`);
       if(i<e.points.length-1){const q=e.points[i+1];
-        parts.push(`<circle class="handle mid" data-mid="${esc(e.id)}:${i}" cx="${n((p[0]+q[0])/2)}" cy="${n((p[1]+q[1])/2)}" r="3.6"/>`);}
+        parts.push(`<circle class="handle mid" data-mid="${esc(e.id)}:${i}" cx="${n((p[0]+q[0])/2)}" cy="${n((p[1]+q[1])/2)}" r="${n(3.6*k)}"/>`);}
     });
   }
   for(const id of sel.labels){
@@ -1046,7 +1091,7 @@ function drawUI(){
   g.innerHTML=parts.join('\n');
 }
 
-/* ---------- координаты ---------- */
+/* ---------- coordinates ---------- */
 function pt(ev){
   const svg=$('#sheet svg'), scene=svg.querySelector('#__ui').parentNode;
   const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY;
@@ -1060,8 +1105,25 @@ function hitShape(m,p){
   return null;
 }
 
-/* ---------- мышь ---------- */
+/* ---------- pointer input ---------- */
+const touches=new Map();
+function startPinch(){
+  /* a second finger turns any gesture in progress into a pinch */
+  if(drag&&(drag.type==='move'||drag.type==='resize'||drag.type==='vtx')&&hist.length)
+    docs[cur]=hist.pop();
+  const [a,b]=[...touches.values()], st=$('#stage'), r=st.getBoundingClientRect();
+  const mx=(a[0]+b[0])/2-r.left, my=(a[1]+b[1])/2-r.top;
+  drag={type:'pinch',d0:Math.hypot(a[0]-b[0],a[1]-b[1])||1,z0:zoom,mx,my,
+        fx:(st.scrollLeft+mx)/zoom,fy:(st.scrollTop+my)/zoom};
+  guides=[]; pending=null; redrawFast();
+}
 function onDown(ev){
+  if(ev.pointerType==='touch'){
+    touches.set(ev.pointerId,[ev.clientX,ev.clientY]);
+    try{$('#sheet svg').setPointerCapture(ev.pointerId);}catch(e){}
+    if(touches.size===2){startPinch();return;}
+    if(touches.size>2)return;
+  }
   if(ev.button!==0)return;
   const m=model(), p=pt(ev), t=ev.target;
   try{$('#sheet svg').setPointerCapture(ev.pointerId);}catch(e){}
@@ -1109,8 +1171,8 @@ function onDown(ev){
     if(ev.shiftKey)sel.shapes.has(id)?sel.shapes.delete(id):sel.shapes.add(id);
     else if(!sel.shapes.has(id))selectOnly('shapes',id);
     push();
-    /* линии каждый раз считаются от состояния на начало перетаскивания:
-       ошибки не копятся, а вернув блок на место, получаем прежние линии */
+    /* edges are recomputed from the state at drag start, so errors do not
+       accumulate and moving a block back restores its original edges */
     drag={type:'move',from:p,at:p,lead:id,edges:clone(m.edges),
           orig:m.shapes.filter(s=>sel.shapes.has(s.id)).map(s=>({id:s.id,x:s.x,y:s.y})),
           origL:m.labels.filter(l=>sel.labels.has(l.id)).map(l=>({id:l.id,x:l.x,y:l.y}))};
@@ -1129,12 +1191,17 @@ function onDown(ev){
     inspect(); drawUI(); return;
   }
   if(!ev.shiftKey)clearSel();
-  drag={type:'marquee',from:p,at:p}; inspect(); drawUI();
+  if(ev.pointerType==='touch'){
+    const st=$('#stage');
+    drag={type:'pan',cx:ev.clientX,cy:ev.clientY,sl:st.scrollLeft,stp:st.scrollTop};
+  }else drag={type:'marquee',from:p,at:p};
+  inspect(); drawUI();
 }
-/* движение обрабатывается не чаще раза за кадр: на телефоне пересчёт линий
-   медленнее, и события иначе копились бы в очередь */
+/* handle at most one move per frame: rerouting is slower on phones and
+   events would pile up otherwise */
 let moveEv=null;
 function onMove(ev){
+  if(touches.has(ev.pointerId))touches.set(ev.pointerId,[ev.clientX,ev.clientY]);
   if(!drag&&!pending)return;
   const first=!moveEv;
   moveEv={clientX:ev.clientX,clientY:ev.clientY,altKey:ev.altKey};
@@ -1145,6 +1212,18 @@ function flushMove(){
   if(ev&&(drag||pending))moveNow(ev);
 }
 function moveNow(ev){
+  if(drag&&drag.type==='pinch'){
+    if(touches.size<2)return;
+    const [a,b]=[...touches.values()], st=$('#stage');
+    setZoom(drag.z0*Math.hypot(a[0]-b[0],a[1]-b[1])/drag.d0);
+    st.scrollLeft=drag.fx*zoom-drag.mx; st.scrollTop=drag.fy*zoom-drag.my;
+    return;
+  }
+  if(drag&&drag.type==='pan'){
+    const st=$('#stage');
+    st.scrollLeft=drag.sl-(ev.clientX-drag.cx); st.scrollTop=drag.stp-(ev.clientY-drag.cy);
+    return;
+  }
   const m=model(), p=pt(ev);
   if(pending){pending.at=p;drawUI();return;}
   if(drag.type==='marquee'){drag.at=p;drawUI();return;}
@@ -1162,8 +1241,8 @@ function moveNow(ev){
                        Math.max(o.y+o.h,drag.orig[0].y+dy+s.h)+30]);break;}
       }
     }
-    /* к сетке привязывается блок под курсором, остальные едут на тот же
-       сдвиг — так группа не расползается */
+    /* the block under the cursor snaps to the grid and the rest of the
+       selection follows by the same offset, so a group keeps its shape */
     const lead=drag.orig.find(o=>o.id===drag.lead)||drag.orig[0];
     if(lead){dx=r2(snap(lead.x+dx,ev.altKey||guides.length>0)-lead.x);
              dy=r2(snap(lead.y+dy,ev.altKey)-lead.y);}
@@ -1191,7 +1270,11 @@ function moveNow(ev){
   }
 }
 function onUp(ev){
-  flushMove();               // последнее движение до отпускания
+  const wasTouch=touches.delete(ev.pointerId);
+  if(drag&&drag.type==='pinch'){if(touches.size<2)drag=null;return;}
+  if(wasTouch&&!drag&&touches.size)return;
+  flushMove();
+  if(drag&&drag.type==='pan'){drag=null;return;}
   const m=model();
   if(drag&&drag.type==='marquee'){
     const[x0,y0]=drag.from,[x1,y1]=drag.at;
@@ -1203,7 +1286,7 @@ function onUp(ev){
         if(l.x>=a[0]&&l.y>=a[1]&&l.x<=a[2]&&l.y<=a[3])sel.labels.add(l.id);
     }
   }
-  if(drag&&drag.type==='vtx'){        // бросили конец линии на блок — привяжем
+  if(drag&&drag.type==='vtx'){        // an end dropped onto a block attaches to it
     const e=m.edges.find(x=>x.id===drag.edge);
     if(e&&(drag.idx===0||drag.idx===e.points.length-1)){
       const s=hitShape(m,e.points[drag.idx]);
@@ -1216,7 +1299,7 @@ function onUp(ev){
         }
         e.points[drag.idx]=[r2(A[best][0]),r2(A[best][1])];
         if(drag.idx===0)e.from={id:s.id,port:best}; else e.to={id:s.id,port:best};
-        routeEdges(m,[e]);     // подход к блоку — строго по нормали
+        routeEdges(m,[e]);
       }
     }
   }
@@ -1231,17 +1314,16 @@ function onDbl(ev){
   inspect(); drawUI();
   const f=$('#fText'); if(f){f.focus();f.select();}
 }
-/* быстрая перерисовка во время перетаскивания — без пересборки панелей */
+/* redraw during a drag without rebuilding the panels */
 function redrawFast(){
   const m=model();
   const svg=$('#sheet svg'); if(!svg)return;
   const out=renderSVG(m,{interactive:true,view,name:nameOf(meta())});
-  const tmp=document.createElement('div'); tmp.innerHTML=out.svg;
-  svg.innerHTML=tmp.firstElementChild.innerHTML;
+  svg.innerHTML=out.svg.slice(out.svg.indexOf('>')+1,out.svg.lastIndexOf('</svg>'));
   drawUI();
 }
 
-/* ---------- операции ---------- */
+/* ---------- operations ---------- */
 function delSel(){
   const m=model(); if(!selCount())return; push();
   m.shapes=m.shapes.filter(s=>!sel.shapes.has(s.id));
@@ -1280,9 +1362,10 @@ function fitShape(id){
   s.x=r2(cx-g.w/2); s.w=g.w; s.h=g.h; syncEdges(m,[s.id]);
 }
 
-/* ---------- инспектор ---------- */
+/* ---------- inspector ---------- */
 function inspect(){
   const box=$('#inspBody'), m=model();
+  document.body.classList.toggle('insp-open',selCount()>0);
   if(sel.shapes.size===1&&!sel.edges.size){
     const s=m.shapes.find(x=>x.id===[...sel.shapes][0]);
     if(!s){box.innerHTML='';return;}
@@ -1313,7 +1396,7 @@ function inspect(){
       const ok=id=>m.shapes.some(x=>x.id===id);
       const list=m.edges.filter(e=>e.from&&e.to&&ok(e.from.id)&&ok(e.to.id)&&
         (e.from.id===s.id||e.to.id===s.id));
-      routeEdges(m,list,{free:true});     // вместе: идущие рядом линии разойдутся
+      routeEdges(m,list,{free:true});     // together, so parallel edges spread apart
       commit();toast(list.length?t('s_rerouted',list.length):t('s_no_links'));};
     $('#fDup').onclick=dupSel; $('#fDel').onclick=delSel;
     return;
@@ -1382,7 +1465,7 @@ function inspect(){
   box.innerHTML=`<p class="note">${t('i_empty')}</p>`;
 }
 
-/* ---------- панель схем ---------- */
+/* ---------- chart list ---------- */
 function buildTree(filter){
   const box=$('#tree'); box.innerHTML='';
   const q=(filter||'').trim().toLowerCase();
@@ -1410,7 +1493,9 @@ function show(anchor){
   $('#caption').textContent=t('caption',i+1,nameOf(it));
   document.title=nameOf(it)+' — '+t('app_title',DATA.folder||'');
   ensureView(model(),true);
+  if(narrow())zoom=Math.max(.5,fitZoom(1));
   draw(); buildTree($('#search').value); inspect();
+  const st=$('#stage'); st.scrollTop=0; st.scrollLeft=(st.scrollWidth-st.clientWidth)/2;
 }
 function newDoc(){
   const name=prompt(t('m_new_name'),t('m_new_default',custom.length+1));
@@ -1434,7 +1519,7 @@ function delDoc(){
   }
 }
 
-/* ---------- тема, язык, имя схемы ---------- */
+/* ---------- theme, language, chart name ---------- */
 function applyTheme(){
   document.body.dataset.theme=THEME;
   const b=$('#btnTheme'); if(b)b.textContent=THEME==='dark'?'☀':'☾';
@@ -1469,7 +1554,7 @@ function renameChart(){
   saveStore(); show(cur); toast(t('s_renamed'));
 }
 
-/* ---------- инструменты ---------- */
+/* ---------- tools ---------- */
 function setTool(t){
   tool=t; pending=null;
   document.querySelectorAll('[data-tool]').forEach(b=>
@@ -1479,7 +1564,7 @@ function setTool(t){
   drawUI();
 }
 
-/* ---------- экспорт ---------- */
+/* ---------- export ---------- */
 function exportSVG(){
   const it=meta();
   const title=exportTitle?(nameOf(it)+(it.line?' — '+it.rel:'')):null;
@@ -1529,9 +1614,9 @@ function importProject(file){
   rd.readAsText(file);
 }
 
-/* ---------- запуск ---------- */
+/* ---------- startup ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
-  loadRouter();              // в фоне: до загрузки линии ведёт запасной алгоритм
+  loadRouter();              // loads in the background; the fallback router works meanwhile
   loadStore();
   applyTheme();
   applyLang();
@@ -1548,16 +1633,20 @@ window.addEventListener('DOMContentLoaded',()=>{
   const cap=$('#capTitle');
   cap.checked=exportTitle;
   cap.onchange=()=>{exportTitle=cap.checked;saveStore();};
-  $('#btnMenu').onclick=()=>document.body.classList.toggle('nav-open');
-  $('#tree').addEventListener('click',()=>document.body.classList.remove('nav-open'));
+  const body=document.body;
+  $('#btnMenu').onclick=()=>{body.classList.remove('more-open');body.classList.toggle('nav-open');};
+  $('#btnMore').onclick=()=>{body.classList.remove('nav-open');body.classList.toggle('more-open');};
+  $('#scrim').onclick=()=>body.classList.remove('nav-open','more-open');
+  $('#more').addEventListener('click',ev=>{
+    if(ev.target.closest('button'))body.classList.remove('more-open');});
+  $('#tree').addEventListener('click',()=>body.classList.remove('nav-open'));
+  $('#btnInsp').onclick=()=>body.classList.remove('insp-open');
   document.querySelectorAll('[data-tool]').forEach(b=>
     b.onclick=()=>setTool(b.getAttribute('data-tool')));
-  $('#zoomIn').onclick=()=>{zoom=Math.min(3,zoom*1.25);draw();};
-  $('#zoomOut').onclick=()=>{zoom=Math.max(.2,zoom/1.25);draw();};
-  $('#zoom100').onclick=()=>{zoom=1;draw();};
-  $('#zoomFit').onclick=()=>{ensureView(model(),true);
-    const out=renderSVG(model(),{view});
-    zoom=Math.max(.2,Math.min(2,($('#stage').clientWidth-80)/out.w));draw();};
+  $('#zoomIn').onclick=()=>setZoom(zoom*1.25);
+  $('#zoomOut').onclick=()=>setZoom(zoom/1.25);
+  $('#zoom100').onclick=()=>setZoom(1);
+  $('#zoomFit').onclick=()=>{zoom=fitZoom(2);draw();};
   $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
   $('#btnSvg').onclick=()=>{download(new Blob([exportSVG()],
     {type:'image/svg+xml;charset=utf-8'}),fileBase()+'.svg');
@@ -1580,7 +1669,8 @@ window.addEventListener('DOMContentLoaded',()=>{
       m.shapes.forEach(s=>sel.shapes.add(s.id));m.edges.forEach(e=>sel.edges.add(e.id));
       m.labels.forEach(l=>sel.labels.add(l.id));drawUI();inspect();return;}
     if(ev.key==='Delete'||ev.key==='Backspace'){ev.preventDefault();delSel();return;}
-    if(ev.key==='Escape'){clearSel();setTool('select');drawUI();inspect();return;}
+    if(ev.key==='Escape'){document.body.classList.remove('nav-open','more-open');
+      clearSel();setTool('select');drawUI();inspect();return;}
     const step=ev.shiftKey?10:1;
     if(ev.key==='ArrowLeft'){ev.preventDefault();nudge(-step,0);}
     if(ev.key==='ArrowRight'){ev.preventDefault();nudge(step,0);}
@@ -1594,7 +1684,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   });
   $('#stage').addEventListener('wheel',ev=>{
     if(!ev.ctrlKey)return; ev.preventDefault();
-    zoom=Math.max(.2,Math.min(3,zoom*(ev.deltaY<0?1.1:1/1.1)));draw();
+    setZoom(zoom*(ev.deltaY<0?1.1:1/1.1));
   },{passive:false});
 });
 """
@@ -1614,7 +1704,7 @@ KINDS = ("terminator", "process", "io", "decision", "predefined",
 
 
 def _palette():
-    """Кнопки палитры; подписи проставляет applyLang() по data-i18n-title."""
+    """Palette buttons; applyLang() fills in their titles."""
     ico = ('<svg width="26" height="26" viewBox="0 0 26 26" fill="none" '
            'stroke="currentColor" stroke-width="1.6">')
     out = [f'<button data-tool="select" class="on" data-i18n-title="t_select">{ico}'
@@ -1634,11 +1724,10 @@ def _palette():
 
 
 def _router_scripts():
-    """libavoid из vendor/web, встроенный прямо в страницу.
+    """libavoid from vendor/web, inlined into the page.
 
-    WebAssembly кладётся строкой base64: fetch() со страницы, открытой как
-    file://, браузеры запрещают, а так альбом остаётся одним файлом, который
-    работает офлайн где угодно. Нет файлов — редактор обойдётся без них.
+    The WebAssembly goes in as base64 because browsers block fetch() from
+    file:// pages. Without the files the editor uses its fallback router.
     """
     js_path = web_asset("libavoid", "libavoid.js")
     wasm_path = web_asset("libavoid", "libavoid.wasm")
@@ -1653,14 +1742,14 @@ def _router_scripts():
 
 
 def render_html(entries, title="Блок-схемы", folder="", lang="ru", theme="light"):
-    """entries: список dict(rel, name, signature, line, anchor, model)."""
+    """entries: dicts with rel, name, signature, line, anchor and model."""
     payload = json.dumps({"folder": folder or title, "items": entries,
                           "lang": lang, "theme": theme},
                          ensure_ascii=False, separators=(",", ":"))
     payload = payload.replace("</", "<\\/")
     return f"""<!DOCTYPE html>
 <html lang="{lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{xml_escape(title)}</title>
 <style>{CSS}</style></head>
 <body data-theme="{theme}">
@@ -1674,6 +1763,7 @@ def render_html(entries, title="Блок-схемы", folder="", lang="ru", them
     <button id="btnRedo" data-i18n-title="b_redo">↷</button>
   </div>
   <div class="sep"></div>
+  <div class="more" id="more">
   <div class="group">
     <label class="check" data-i18n-title="cap_title_t">
       <input type="checkbox" id="capTitle" checked>
@@ -1695,6 +1785,8 @@ def render_html(entries, title="Блок-схемы", folder="", lang="ru", them
     <button id="btnTheme" data-i18n-title="b_theme_t">☾</button>
     <button id="btnLang" data-i18n-title="b_lang_t">EN</button>
   </div>
+  </div>
+  <button id="btnMore" class="only-narrow" data-i18n-title="b_more_t">⋯</button>
 </div>
 
 <div class="layout">
@@ -1720,7 +1812,7 @@ def render_html(entries, title="Блок-схемы", folder="", lang="ru", them
         <span class="zoomval" id="zoomVal">100%</span>
         <button id="zoomIn" data-i18n-title="z_in">+</button>
         <button id="zoom100">1:1</button>
-        <button id="zoomFit" class="wide" data-i18n="z_fit"></button>
+        <button id="zoomFit" data-i18n="z_fit"></button>
       </div>
     </div>
     <div class="work">
@@ -1733,10 +1825,12 @@ def render_html(entries, title="Блок-схемы", folder="", lang="ru", them
   </main>
 
   <aside class="insp">
-    <h3 data-i18n="props"></h3>
+    <div class="ihead"><h3 data-i18n="props"></h3>
+      <button id="btnInsp" class="insp-close ghost tiny" data-i18n-title="b_close">✕</button></div>
     <div id="inspBody"></div>
   </aside>
 </div>
+<div class="scrim" id="scrim"></div>
 <div class="toast" id="toast"></div>
 <script>const DATA={payload};</script>
 {_router_scripts()}<script>{JS_CORE}{JS_APP}</script>
