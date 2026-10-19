@@ -4,8 +4,12 @@
     python tools/vendor.py                       Windows x64 + Linux x86-64 + web
     python tools/vendor.py --only linux_aarch64  a single platform
     python tools/vendor.py --web                 browser libraries only
+    python tools/vendor.py --grammars            add missing grammars only,
+                                                 leaving everything else as is
 
-Wheels come from PyPI and are unpacked into vendor/<platform>/<cpXY>.
+Wheels come from PyPI and are unpacked into vendor/<platform>/<cpXY>; the
+grammars (abi3, one build for every Python) go to vendor/<platform>/common.
+Which grammars to bundle is read from blockwright/languages/*.toml.
 libavoid-js comes from npm into vendor/web, shared by all platforms; Node.js
 is not needed. Needs network access.
 """
@@ -46,7 +50,27 @@ OPTIONAL = {
     "macos_arm64": "macosx_11_0_arm64",
     "macos_x86_64": "macosx_10_9_x86_64",
 }
-GRAMMARS = {"tree_sitter_c": "tree_sitter_c", "tree_sitter_cpp": "tree_sitter_cpp"}
+LANG_DIR = os.path.join(ROOT, "blockwright", "languages")
+
+
+def grammars():
+    """{module: pip package} for every built-in language description."""
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+    out = {}
+    for nm in sorted(os.listdir(LANG_DIR)):
+        if not nm.endswith(".toml"):
+            continue
+        with open(os.path.join(LANG_DIR, nm), "rb") as fh:
+            data = tomllib.load(fh)
+        g = data.get("grammar")
+        if not g:
+            continue
+        module = g if isinstance(g, str) else g["module"]
+        out[module] = data.get("package", module.replace("_", "-"))
+    return out
 
 
 def download(pkgs, dest, py, platform_tag):
@@ -65,26 +89,50 @@ def extract(whl, dest, keep):
             z.extract(name, dest)
 
 
-def build(platform_name, pip_tag):
-    out = os.path.join(ROOT, "vendor", platform_name)
-    if os.path.isdir(out):
-        shutil.rmtree(out)
-    os.makedirs(os.path.join(out, "common"), exist_ok=True)
+def add_grammars(out, pip_tag, missing_only=False):
+    """Unpack the grammars into <out>/common, replacing older copies."""
+    gram = grammars()
+    if missing_only:
+        gram = {m: p for m, p in gram.items()
+                if not os.path.isdir(os.path.join(out, "common", m))}
     with tempfile.TemporaryDirectory() as tmp:
-        for py in PYTHONS:
-            if not download(["tree_sitter", "tree_sitter_c", "tree_sitter_cpp"],
-                            tmp, py, pip_tag):
-                print(f"  ! не удалось скачать для Python {py}", file=sys.stderr)
-        for pkg in GRAMMARS:
-            found = sorted(glob.glob(os.path.join(tmp, pkg.replace("_", "_") + "-*.whl")))
+        if gram and not download(sorted(set(gram.values())), tmp, PYTHONS[0], pip_tag):
+            print("  ! не все грамматики скачались", file=sys.stderr)
+        for module in gram:
+            found = sorted(glob.glob(os.path.join(tmp, module + "-*.whl")))
             if not found:
-                print(f"  ! нет колеса {pkg}", file=sys.stderr)
+                print(f"  ! нет колеса {module}", file=sys.stderr)
                 continue
-            extract(found[-1], os.path.join(out, "common"), {pkg})
-        for whl in glob.glob(os.path.join(tmp, "tree_sitter-*.whl")):
-            tag = os.path.basename(whl).split("-")[2]
-            if tag.startswith("cp"):
-                extract(whl, os.path.join(out, tag), {"tree_sitter"})
+            dest = os.path.join(out, "common", module)
+            if os.path.isdir(dest):
+                shutil.rmtree(dest)
+            extract(found[-1], os.path.join(out, "common"), {module})
+        # Python 3.10 has no tomllib: the language descriptions need tomli
+        if download(["tomli"], tmp, "3.10", pip_tag):
+            for whl in glob.glob(os.path.join(tmp, "tomli-*.whl")):
+                dest = os.path.join(out, "cp310")
+                if os.path.isdir(os.path.join(dest, "tomli")):
+                    shutil.rmtree(os.path.join(dest, "tomli"))
+                extract(whl, dest, {"tomli"})
+
+
+def build(platform_name, pip_tag, grammars_only=False):
+    out = os.path.join(ROOT, "vendor", platform_name)
+    if grammars_only:
+        add_grammars(out, pip_tag, missing_only=True)
+    else:
+        if os.path.isdir(out):
+            shutil.rmtree(out)
+        os.makedirs(os.path.join(out, "common"), exist_ok=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            for py in PYTHONS:
+                if not download(["tree_sitter"], tmp, py, pip_tag):
+                    print(f"  ! не удалось скачать для Python {py}", file=sys.stderr)
+            for whl in glob.glob(os.path.join(tmp, "tree_sitter-*.whl")):
+                tag = os.path.basename(whl).split("-")[2]
+                if tag.startswith("cp"):
+                    extract(whl, os.path.join(out, tag), {"tree_sitter"})
+        add_grammars(out, pip_tag)
     size = sum(os.path.getsize(os.path.join(r, f))
                for r, _, fs in os.walk(out) for f in fs)
     print(f"{platform_name}: {sorted(os.listdir(out))}  ({size / 1024 / 1024:.1f} МБ)")
@@ -162,11 +210,14 @@ def main():
                     help="только одна платформа (в том числе необязательная)")
     ap.add_argument("--web", action="store_true",
                     help="только библиотеки редактора (libavoid-js)")
+    ap.add_argument("--grammars", action="store_true",
+                    help="только добавить недостающие грамматики языков (и tomli "
+                         "для Python 3.10), не трогая уже скачанное")
     args = ap.parse_args()
     if args.web:
         build_web()
         return 0
-    if not args.only:
+    if not args.only and not args.grammars:
         build_web()
     targets = dict(TARGETS)
     if args.only and args.only in OPTIONAL:
@@ -175,7 +226,7 @@ def main():
         if args.only and args.only != name:
             continue
         print(f"Собираю {name} …")
-        build(name, tag)
+        build(name, tag, grammars_only=args.grammars)
     return 0
 
 

@@ -23,7 +23,7 @@ ENV_DIRS = "BLOCKWRIGHT_LANGS"
 
 # statement kinds a description may use, with the keys each one accepts
 KINDS = {
-    "block": set(),
+    "block": {"skip"},
     "skip": set(),
     "simple": set(),
     "expression": {"skip"},
@@ -41,7 +41,7 @@ KINDS = {
     "throw": {"value"},
     "goto": {"label"},
     "label": {"label"},
-    "try": {"body", "handlers", "else", "finally"},
+    "try": {"body", "handlers", "else", "finally", "catch_all"},
     "inline": {"body"},
     "hook": {"hook"},
 }
@@ -144,6 +144,7 @@ class Spec:
         self.io_unwrap_args = set(io.get("unwrap_args", []))
         self.io_input_strip = io.get("input_strip", "")
         self.io_conversions = io.get("printf_conversions", "diuoxXfFeEgGaAcspn")
+        self.io_format_replace = io.get("format_replace", {})
         st = io.get("streams")
         self.streams = None
         if st:
@@ -160,6 +161,8 @@ class Spec:
         self.string_nodes = set(strings.get("nodes", []))
         self.string_concat = set(strings.get("concat", []))
         self.concat_operator = strings.get("concat_operator")
+        self.format_operator = strings.get("format_operator")
+        self.format_tuples = set(strings.get("format_tuples", []))
         self.escape = strings.get("escape", "backslash")
         self.template = strings.get("template")
 
@@ -216,7 +219,7 @@ class Spec:
                     raise SpecError(f"{where}: statements.{node_type}.handlers.{ht}: "
                                     f"лишние ключи {', '.join(sorted(bad))}")
             rule["handlers"] = handlers
-        for key in ("else", "finally"):
+        for key in ("else", "finally", "catch_all"):
             if kind == "try" and isinstance(rule.get(key), str):
                 rule[key] = [rule[key]]
         return rule

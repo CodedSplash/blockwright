@@ -61,24 +61,27 @@ def unescape(s):
     return "".join(out)
 
 
-def _minus_one(t):
+def _shift(t, delta):
+    """`t + delta` for a loop bound: `n + 1` - 1 is `n`, `n - 1` - 1 is `n - 2`."""
     t = t.strip()
     if _INT_RE.match(t):
-        return str(int(t) - 1)
-    m = re.fullmatch(r"(.+?)\s*\+\s*1", t)
-    if m:
-        return m.group(1)
-    return f"{t} - 1"
+        return str(int(t) + delta)
+    base, offset = t, 0
+    m = re.fullmatch(r"(.+?)\s*([+-])\s*(\d+)", t)
+    if m and not m.group(1).rstrip().endswith(("*", "/", "%", "(", "[", ",")):
+        base, offset = m.group(1), int(m.group(3)) * (1 if m.group(2) == "+" else -1)
+    offset += delta
+    if offset == 0:
+        return base
+    return f"{base} + {offset}" if offset > 0 else f"{base} - {-offset}"
+
+
+def _minus_one(t):
+    return _shift(t, -1)
 
 
 def _plus_one(t):
-    t = t.strip()
-    if _INT_RE.match(t):
-        return str(int(t) + 1)
-    m = re.fullmatch(r"(.+?)\s*-\s*1", t)
-    if m:
-        return m.group(1)
-    return f"{t} + 1"
+    return _shift(t, 1)
 
 
 def strip_parens(s):
@@ -198,10 +201,11 @@ class Builder:
     def block(self, node):
         return M.Seq(self.stmt_list(node))
 
-    def inner(self, node):
+    def inner(self, node, skip=()):
         out = []
         for c in self.named(node):
-            out.extend(self.stmt(c))
+            if c.type not in skip:
+                out.extend(self.stmt(c))
         return out
 
     def stmt(self, n):
@@ -228,7 +232,7 @@ class Builder:
         return fn(self, node, rule)
 
     def k_block(self, n, r):
-        return self.inner(n)
+        return self.inner(n, r.get("skip", ()))
 
     def k_skip(self, n, r):
         return []
@@ -253,7 +257,10 @@ class Builder:
             io = self.assign_input(inner)
         if io is not None:
             return [io]
-        if self.is_user_call(inner):
+        if self.is_user_call(inner) or (
+                not inner.named_child_count
+                and self.spec.fold(self.raw(inner)) in self.known):
+            # `f(x)`, or a bare `Show;` in Pascal
             return [M.Simple(M.PREDEF, self.t(inner))]
         txt = self.t(inner)
         return [M.Simple(M.PROCESS, txt)] if txt else []
@@ -616,14 +623,26 @@ class Builder:
                 items.extend(self.stmt(c))
         return items
 
+    def _clause(self, node):
+        """`else:` / `finally:` wrappers hold statements; a statement node is one."""
+        return self.stmt(node) if self.spec.rule(node) else self.inner(node)
+
+    def _parts(self, n, paths, exclude):
+        out = []
+        for path in paths:
+            for c in self.find_all(n, path):
+                if c.id not in exclude:
+                    out.append(c)
+        return out
+
     def k_try(self, n, r):
-        items = self.stmt_list(self.find(n, r.get("body")))
-        kids = self.named(n)
-        for c in kids:
-            if c.type in r.get("else", ()):
-                items.extend(self.inner(c))
+        body = self.find(n, r.get("body"))
+        items = self.stmt_list(body)
+        taken = {body.id} if body is not None else set()
+        for c in self._parts(n, r.get("else", ()), taken):
+            items.extend(self._clause(c))
         handlers = r.get("handlers", {})
-        for c in kids:
+        for c in self.named(n):
             h = handlers.get(c.type)
             if h is None:
                 continue
@@ -637,9 +656,15 @@ class Builder:
             params = strip_parens(self.t(param)) if param is not None else ""
             cond = self.L("caught", params) if params else self.L("caught_bare")
             items.append(M.If(cond, self.block(body), None))
-        for c in kids:
-            if c.type in r.get("finally", ()):
-                items.extend(self.inner(c))
+        # Pascal `except … end` without `on`: statements that catch anything
+        rest = []
+        for c in self._parts(n, r.get("catch_all", ()), taken):
+            if c.type not in handlers:
+                rest.extend(self.stmt(c))
+        if rest:
+            items.append(M.If(self.L("caught_bare"), M.Seq(rest), None))
+        for c in self._parts(n, r.get("finally", ()), taken):
+            items.extend(self._clause(c))
         return items
 
     def k_inline(self, n, r):
@@ -766,6 +791,17 @@ class Builder:
             return prefix + ", ".join(exprs) if exprs else self.L("newline")
         return prefix + body
 
+    def _percent(self, node):
+        """Python's `"%d items" % n` as the text it prints, else None."""
+        op = self.spec.format_operator
+        left, right = self.sides(node) if op else (None, None)
+        if left is None or self.op_of(node) != op or self._string_value(left) is None:
+            return None
+        args = [right]
+        if right.type in self.spec.format_tuples:
+            args = self.named(right)
+        return self._format_call(left, args, "")
+
     def _segments(self, nodes, sep=""):
         segs = []
         for i, p in enumerate(nodes):
@@ -773,6 +809,10 @@ class Builder:
                 segs.append(("sep", sep))
             if self._is_manipulator(p):
                 segs.append(("text", " "))
+                continue
+            pct = self._percent(p)
+            if pct is not None:
+                segs.append(("text", pct))
                 continue
             for part in self._concat_parts(p):
                 val = self._string_value(part)
@@ -807,6 +847,8 @@ class Builder:
                     return "{" + args[used[0] - 1] + "}"
                 return m.group(0)
             body = self._spec_re.sub(repl, fmt)
+            for k, v in self.spec.io_format_replace.items():
+                body = body.replace(k, v)
         tail = args[used[0]:]
         if tail:
             body = body.rstrip() + " " + ", ".join("{" + a + "}" for a in tail)
@@ -853,6 +895,16 @@ class Builder:
             if res is not None:
                 return res
         if node.type not in self.spec.call_nodes:
+            if node.named_child_count:
+                return None
+            # a call without parentheses: Pascal `writeln;`, `readln;`
+            name = self.spec.fold(self.raw(node))
+            if name in self.spec.io_output:
+                return M.Simple(M.IO, self.t(node) if self.opts.io_style == "code"
+                                else self.L("newline"))
+            if name in self.spec.io_input:
+                return M.Simple(M.IO, self.t(node) if self.opts.io_style == "code"
+                                else self.L("in_plain"))
             return None
         style = self.opts.io_style
         code_style = style == "code"
@@ -871,14 +923,20 @@ class Builder:
             if code_style:
                 return M.Simple(M.IO, self.t(node))
             if style == "pretty" and nodes:
-                if "format" in out and out["format"] < len(nodes):
-                    k = out["format"]
+                k = out.get("format")
+                # with `weave` too, the format is used only when it is a literal
+                # followed by arguments: Console.WriteLine("{0}", x) vs ("a" + x)
+                if k is not None and k < len(nodes) and (
+                        "weave" not in out or (len(nodes) > k + 1
+                                               and self._string_value(nodes[k]) is not None)):
                     return M.Simple(M.IO, self._format_call(
                         nodes[k], nodes[k + 1:], self.L("out"), out.get("style", "printf")))
                 if "weave" in out:
                     picked = nodes[parse_slice(out["weave"])]
                     return M.Simple(M.IO, self._weave(self._segments(picked, out.get("sep", "")),
                                                       self.L("out")))
+            if style == "pretty" and "weave" in out:
+                return M.Simple(M.IO, self.L("newline"))
             picked = args[parse_slice(out.get("args"))]
             return M.Simple(M.IO, self.L("out") + ", ".join(picked)
                             if picked else self.L("out_plain"))
