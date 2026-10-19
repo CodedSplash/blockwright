@@ -19,7 +19,7 @@ from blockwright import vendored  # noqa: E402
 vendored.activate()
 
 from blockwright import parse as P  # noqa: E402
-from blockwright.build import Builder  # noqa: E402
+from blockwright import project  # noqa: E402
 from blockwright.cli import CHART_WORDS, Opts  # noqa: E402
 
 FIXTURES = os.path.join(HERE, "fixtures")
@@ -53,27 +53,21 @@ def ir(obj):
 
 
 def analyze(folder, opts):
-    files = P.discover([folder])
-    parsed, known = [], set()
-    for path in files:
-        with open(path, "rb") as fh:
-            src = fh.read()
-        lang = P.guess_language(path, src.decode("utf-8", "replace"))
-        tree, lang, errs = P.parse_source(src, lang)
-        known |= P.collect_known_names(src, tree.root_node)
-        parsed.append((path, src, tree, lang, errs))
+    sources, known = [], set()
+    for path in P.discover([folder]):
+        src = project.load(path)
+        known |= src.known
+        sources.append(src)
     result = {}
-    for path, src, tree, lang, errs in parsed:
-        builder = Builder(src, opts, known)
+    for src in sources:
         funcs = []
-        for node in P.collect_functions(src, tree.root_node):
-            info = P.describe_function(src, node)
-            body = builder.build_body(info["body"], is_main=info["base"] == "main")
+        for ch in project.charts(src, opts, known):
+            info = ch.info
             funcs.append({"name": info["name"], "signature": info["signature"],
                           "short": info["short"], "line": info["line"],
-                          "body": ir(body)})
-        rel = os.path.relpath(path, folder).replace("\\", "/")
-        result[rel] = {"lang": lang, "errors": errs, "functions": funcs}
+                          "body": ir(ch.body)})
+        rel = os.path.relpath(src.path, folder).replace("\\", "/")
+        result[rel] = {"lang": src.spec.name, "errors": src.errors, "functions": funcs}
     return result
 
 

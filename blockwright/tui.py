@@ -9,6 +9,7 @@ import shutil
 import sys
 
 from . import parse as P
+from . import project
 
 IS_WIN = os.name == "nt"
 
@@ -59,7 +60,7 @@ DEFAULTS = {"for_style": "auto", "io_style": "pretty", "return_style": "auto",
 # -------------------------------------------------------------------- i18n
 L10N = {
     "ru": {
-        "title": "  Блок-схемы C / C++   ·   выбор исходников",
+        "title": "  Блок-схемы по исходному коду   ·   выбор исходников",
         "folder": "Папка:", "marked": "отмечено файлов: {0}",
         "files": "ФАЙЛЫ И ПАПКИ", "funcs": "ФУНКЦИИ  {0} из {1}",
         "up": "на уровень выше", "settings": "Настройки",
@@ -81,7 +82,7 @@ L10N = {
         "press_any": "Нажмите любую клавишу…",
     },
     "en": {
-        "title": "  Flowcharts for C / C++   ·   pick the sources",
+        "title": "  Flowcharts from source code   ·   pick the sources",
         "folder": "Folder:", "marked": "files selected: {0}",
         "files": "FILES AND FOLDERS", "funcs": "FUNCTIONS  {0} of {1}",
         "up": "one level up", "settings": "Settings",
@@ -278,13 +279,14 @@ class Picker:
         except OSError:
             names = []
         dirs, files = [], []
+        exts = P.extensions()
         for nm in names:
             full = os.path.join(self.cwd, nm)
             if os.path.isdir(full):
                 if nm in P.SKIP_DIRS or nm.startswith("."):
                     continue
                 dirs.append(("dir", full, nm))
-            elif os.path.splitext(nm)[1].lower() in P.ALL_EXT:
+            elif os.path.splitext(nm)[1].lower() in exts:
                 files.append(("file", full, nm))
         return items + dirs + files
 
@@ -314,16 +316,11 @@ class Picker:
         if hit and hit[0] == mtime:
             return hit[1]
         try:
-            with open(path, "rb") as fh:
-                src = fh.read()
+            source = project.load(path)
         except OSError:
             return []
-        text = src.decode("utf-8", "replace")
-        lang = P.guess_language(path, text)
-        tree, lang, _ = P.parse_source(src, lang)
         out = []
-        for node in P.collect_functions(src, tree.root_node):
-            info = P.describe_function(src, node)
+        for info in (project.outline(source) if source is not None else []):
             out.append((info["name"], info["line"]))
         self.cache[path] = (mtime, out)
         return out

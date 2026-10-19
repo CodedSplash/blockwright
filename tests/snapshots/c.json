@@ -282,7 +282,8 @@
          "type": "Seq"
         },
         "cond": "k < n",
-        "type": "DoWhile"
+        "type": "DoWhile",
+        "until": false
        },
        {
         "body": {
@@ -762,7 +763,8 @@
          "type": "Seq"
         },
         "cond": "k < n",
-        "type": "DoWhile"
+        "type": "DoWhile",
+        "until": false
        },
        {
         "body": {
@@ -1262,7 +1264,8 @@
          "type": "Seq"
         },
         "cond": "k < n",
-        "type": "DoWhile"
+        "type": "DoWhile",
+        "until": false
        },
        {
         "body": {

@@ -43,22 +43,32 @@ def paths(root=None):
 
 
 def have_parsers():
+    """tree-sitter itself and a TOML reader for the language descriptions."""
     try:
         import tree_sitter  # noqa: F401
-        import tree_sitter_c  # noqa: F401
-        import tree_sitter_cpp  # noqa: F401
+        try:
+            import tomllib  # noqa: F401
+        except ImportError:
+            import tomli  # noqa: F401
         return True
     except Exception:  # noqa: BLE001
         return False
 
 
 def activate(root=None):
-    """Put the bundled parsers on sys.path unless the system has its own."""
-    if have_parsers():
-        return True
+    """Put the bundled parsers on sys.path.
+
+    When the system has tree-sitter of its own, the bundle only fills the
+    gaps: it goes to the end of sys.path, so grammars missing from the
+    system still come from vendor/.
+    """
+    have = have_parsers()
     for p in paths(root):
         if p not in sys.path:
-            sys.path.insert(0, p)
+            if have:
+                sys.path.append(p)
+            else:
+                sys.path.insert(0, p)
     return have_parsers()
 
 
