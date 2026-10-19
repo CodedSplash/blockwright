@@ -12,11 +12,12 @@ import webbrowser
 from dataclasses import dataclass
 
 from . import __version__
+from . import langs
 from . import parse as P
+from . import project
 from . import vendored
 from . import png as PNG
 from .album import render_html
-from .build import Builder
 from .layout import layout_function
 from .render import frame_to_dict, render_svg
 
@@ -88,8 +89,9 @@ def safe_name(s, limit=90):
 def build_parser():
     ap = argparse.ArgumentParser(
         prog="blockwright",
-        description="Построение блок-схем (ГОСТ 19.701-90) по исходному коду C и C++. "
-                    "Разбор кода выполняется парсерами tree-sitter.",
+        description="Построение блок-схем (ГОСТ 19.701-90) по исходному коду: C, C++, "
+                    "Python, Pascal, Java, C#, Go, JavaScript и любой язык, для которого "
+                    "написано описание. Разбор кода выполняется парсерами tree-sitter.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Примеры:\n"
                "  python -m blockwright \"Лабораторная работа №1\"\n"
@@ -109,8 +111,18 @@ def build_parser():
                     help="строить только функции, подходящие под шаблон (можно повторять)")
     ap.add_argument("--exclude", action="append", default=[], metavar="ШАБЛОН",
                     help="пропустить функции по шаблону")
-    ap.add_argument("--lang", choices=["auto", "c", "cpp"], default="auto",
-                    help="принудительно задать язык (по умолчанию определяется сам)")
+    ap.add_argument("--lang", action="append", default=[], metavar="ЯЗЫК",
+                    help="брать только файлы этих языков, например --lang python "
+                         "или --lang c,cpp; файл с незнакомым расширением разбирается "
+                         "как указанный язык (по умолчанию язык определяется сам)")
+    ap.add_argument("--lang-dir", action="append", default=[], metavar="ПАПКА",
+                    help="папка с дополнительными описаниями языков (*.toml); "
+                         "см. docs/languages.md")
+    ap.add_argument("--langs", action="store_true", dest="list_langs",
+                    help="показать известные языки и выйти")
+    ap.add_argument("--tree", action="store_true",
+                    help="напечатать синтаксическое дерево файлов (типы узлов и поля) "
+                         "— подсказка для тех, кто пишет описание языка")
     ap.add_argument("--for-style", choices=["auto", "hexagon", "decision"], default="auto",
                     help="оформление for: шестиугольник «подготовка» или явные блоки")
     ap.add_argument("--io-style", choices=["pretty", "list", "natural", "code"],
@@ -213,8 +225,68 @@ def run_picker(args):
     return True
 
 
+def print_langs(reg):
+    for spec in reg.select():
+        state = "есть" if spec.available else f"нет — {spec.install_hint()}"
+        print(f"  {spec.name:<12} {spec.title:<12} {' '.join(spec.extensions):<40} "
+              f"грамматика: {state}")
+        print(f"  {'':<12} {spec.path}")
+
+
+def print_trees(paths, only):
+    """`--tree`: node types with field names, as a language description sees them."""
+    files = P.discover(paths, only=only) if paths else []
+    if not files:
+        print("Укажите файл: python -m blockwright --tree prog.py", file=sys.stderr)
+        return 2
+    for path in files:
+        source = project.load(path, only)
+        if source is None or source.tree is None:
+            what = source.spec.install_hint() if source else "язык не определён"
+            print(f"{path}: не разобран ({what})", file=sys.stderr)
+            continue
+        print(f"# {path} [{source.spec.name}]")
+        src = source.src
+
+        def walk(node, depth, field):
+            text = src[node.start_byte:node.end_byte].decode("utf-8", "replace")
+            head = f"{field}: " if field else ""
+            leaf = f"  «{' '.join(text.split())[:60]}»" if node.named_child_count == 0 else ""
+            print(f"{'  ' * depth}{head}{node.type}{leaf}")
+            for i in range(node.child_count):
+                c = node.child(i)
+                if c.is_named:
+                    walk(c, depth + 1, node.field_name_for_child(i))
+
+        walk(source.tree.root_node, 0, None)
+    return 0
+
+
+def setup_languages(args):
+    """Load language descriptions; returns the set of languages to use or None."""
+    reg = langs.registry(args.lang_dir)
+    for err in reg.errors:
+        print(f"  ! {err}", file=sys.stderr)
+    only = {x.strip() for v in args.lang for x in v.split(",") if x.strip()}
+    only.discard("auto")
+    unknown = sorted(only - set(reg.names()))
+    if unknown:
+        print(f"Неизвестный язык: {', '.join(unknown)}. Доступны: {', '.join(reg.names())}",
+              file=sys.stderr)
+        return False
+    return only or None
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    only = setup_languages(args)
+    if only is False:
+        return 2
+    if args.list_langs:
+        print_langs(langs.registry())
+        return 0
+    if args.tree:
+        return print_trees(args.paths, only)
     prefs = load_prefs()
     # command-line flags win over remembered choices
     args.ui_lang = args.ui_lang or prefs.get("ui_lang") or "ru"
@@ -239,9 +311,10 @@ def main(argv=None):
                 begin_label=words["begin"], end_label=words["end"],
                 default_label=words["default"])
 
-    files = P.discover(paths, recursive=not args.no_recursive)
+    files = P.discover(paths, recursive=not args.no_recursive, only=only)
     if not files:
-        print("Исходные файлы (.c/.cpp/.h/.hpp) не найдены.", file=sys.stderr)
+        exts = " ".join(sorted(P.extensions(only)))
+        print(f"Исходные файлы не найдены (расширения: {exts}).", file=sys.stderr)
         return 2
 
     root = os.path.abspath(paths[0])
@@ -263,48 +336,61 @@ def main(argv=None):
             print(*a)
 
     # first pass: names of user functions across the whole project
-    parsed = []
+    sources = []
     known = set()
+    missing = {}
     for path in files:
         try:
-            with open(path, "rb") as fh:
-                src = fh.read()
+            src = project.load(path, only)
         except OSError as e:
             print(f"  ! {path}: {e}", file=sys.stderr)
             continue
-        text = src.decode("utf-8", "replace")
-        lang = P.guess_language(path, text, None if args.lang == "auto" else args.lang)
-        tree, lang, errs = P.parse_source(src, lang)
-        known |= P.collect_known_names(src, tree.root_node)
-        parsed.append((path, src, tree, lang, errs))
+        if src is None:
+            continue
+        if src.tree is None:
+            missing.setdefault(src.spec.name, (src.spec, []))[1].append(path)
+            continue
+        known |= src.known
+        sources.append(src)
+    for spec, paths_ in missing.values():
+        print(f"  ! {spec.title}: нет грамматики tree-sitter, пропущено файлов — "
+              f"{len(paths_)}. Установите: {spec.install_hint()}", file=sys.stderr)
+
+    # lab.cpp and lab.py side by side: keep the extension in chart file names
+    stems = {}
+    for source in sources:
+        stem = os.path.splitext(rel_path(source.path, base_dir))[0]
+        stems[stem] = stems.get(stem, 0) + 1
 
     entries = []
     svg_files = []
     used = set()
     total_funcs = 0
-    for path, src, tree, lang, errs in parsed:
+    for source in sources:
+        path = source.path
         rel = rel_path(path, base_dir)
-        if errs:
-            log(f"  ~ {rel}: разобран с {errs} ошибочн. участк. "
+        file_stem = os.path.splitext(rel)[0]
+        if stems[file_stem] > 1:
+            file_stem = rel.replace(".", "_")
+        if source.errors:
+            log(f"  ~ {rel}: разобран с {source.errors} ошибочн. участк. "
                 f"(схемы строятся по распознанной части)")
-        builder = Builder(src, opts, known)
-        funcs = P.collect_functions(src, tree.root_node)
+        infos = [i for i in project.outline(source)
+                 if match_name(i["name"], i["base"], args.only, args.exclude)]
         made = 0
-        for node in funcs:
-            info = P.describe_function(src, node)
-            if not match_name(info["name"], info["base"], args.only, args.exclude):
-                continue
-            total_funcs += 1
-            if args.list_only:
+        if args.list_only:
+            for info in infos:
+                total_funcs += 1
                 print(f"{rel}:{info['line']}: {info['name']}  —  {info['signature']}")
-                made += 1
-                continue
-            fn_body = builder.build_body(info["body"], is_main=info["base"] == "main")
+            continue
+        for chart in project.charts(source, opts, known, infos):
+            info = chart.info
+            total_funcs += 1
             from .model import Function
-            short = (opts.begin_label if info["base"] == "main" else info["short"])
+            short = opts.begin_label if info["main"] else info["short"]
             fn = Function(name=info["name"], signature=info["signature"],
                           short=short, file=path, rel=rel,
-                          line=info["line"], lang=lang, body=fn_body)
+                          line=info["line"], lang=source.spec.name, body=chart.body)
             try:
                 frame = layout_function(fn, opts)
             except Exception as e:                       # noqa: BLE001
@@ -312,7 +398,7 @@ def main(argv=None):
                       file=sys.stderr)
                 continue
             title = f"{fn.name} — {rel}"
-            stem = safe_name(f"{os.path.splitext(rel)[0].replace('/', '_')}__{fn.name}")
+            stem = safe_name(f"{file_stem.replace('/', '_')}__{fn.name}")
             uniq, k = stem, 2
             while uniq in used:
                 uniq = f"{stem}_{k}"
@@ -332,8 +418,7 @@ def main(argv=None):
                 "model": model,
             })
             made += 1
-        if not args.list_only:
-            log(f"  {rel}: функций — {made} [{lang}]")
+        log(f"  {rel}: функций — {made} [{source.spec.name}]")
 
     if args.list_only:
         print(f"\nВсего функций: {total_funcs}")

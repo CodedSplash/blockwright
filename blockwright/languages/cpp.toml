@@ -1,0 +1,54 @@
+# C++: everything C has, plus streams, classes, range-for and exceptions.
+
+name = "cpp"
+title = "C++"
+extends = "c"
+grammar = "tree_sitter_cpp"
+package = "tree-sitter-cpp"
+extensions = [".cpp", ".cc", ".cxx", ".c++", ".cp",
+              ".h", ".hpp", ".hh", ".hxx", ".h++", ".inl", ".ipp", ".tcc"]
+priority = 0
+# words that make an ambiguous header C++
+markers = ["std::", "class ", "namespace ", "template<", "template <",
+           "public:", "private:", "protected:", "::", "#include <iostream>",
+           "nullptr", "auto ", "new ", "delete "]
+retry = ["c"]
+
+[functions]
+names = ["identifier", "field_identifier", "type_identifier", "qualified_identifier",
+         "operator_name", "destructor_name", "operator_cast"]
+scopes = ["class_specifier", "struct_specifier", "union_specifier", "namespace_definition"]
+
+[conditions]
+# `if (int x = f())`: the condition is the value of the clause
+condition_clause = "value"
+
+[statements]
+field_declaration = "simple"
+for_range_loop = { kind = "foreach", var = "declarator", iterable = "right", body = "body" }
+try_statement = { kind = "try", body = "body", handlers = { catch_clause = { parameter = "parameters" } } }
+throw_statement = "throw"
+
+[io.output]
+cout = {}
+
+[io.input]
+# std::getline(std::cin, line): input only when the first argument is a stream
+getline = { args = "1:", stream = 0 }
+
+[io.streams]
+output = ["cout", "cerr", "clog", "wcout"]
+input = ["cin", "wcin"]
+output_operator = "<<"
+input_operator = ">>"
+# left out when output is listed rather than woven into a sentence
+newline = ["std::endl", "endl", '"\n"', "'\\n'", "std::flush", "flush"]
+# stream manipulators print nothing by themselves
+manipulators = ["endl", "flush", "ends", "fixed", "scientific", "hexfloat",
+                "defaultfloat", "boolalpha", "noboolalpha", "showpoint",
+                "noshowpoint", "showpos", "noshowpos", "left", "right",
+                "internal", "hex", "dec", "oct", "setw", "setprecision",
+                "setfill", "setbase", "setiosflags", "resetiosflags"]
+
+[strings]
+nodes = ["string_literal", "raw_string_literal", "char_literal"]

@@ -54,6 +54,7 @@ class While:
 class DoWhile:
     cond: str
     body: object
+    until: bool = False       # Pascal `repeat … until`: the loop ends when cond holds
 
 
 @dataclass

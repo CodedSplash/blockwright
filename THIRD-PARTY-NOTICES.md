@@ -9,6 +9,12 @@ license.
 | [py-tree-sitter](https://github.com/tree-sitter/py-tree-sitter) | `vendor/<platform>/cpXY/tree_sitter`, binaries | MIT |
 | [tree-sitter-c](https://github.com/tree-sitter/tree-sitter-c) | `vendor/<platform>/common/tree_sitter_c`, binaries | MIT |
 | [tree-sitter-cpp](https://github.com/tree-sitter/tree-sitter-cpp) | `vendor/<platform>/common/tree_sitter_cpp`, binaries | MIT |
+| [tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python) | `vendor/<platform>/common/tree_sitter_python`, binaries | MIT |
+| [tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) | `vendor/<platform>/common/tree_sitter_java`, binaries | MIT |
+| [tree-sitter-c-sharp](https://github.com/tree-sitter/tree-sitter-c-sharp) | `vendor/<platform>/common/tree_sitter_c_sharp`, binaries | MIT |
+| [tree-sitter-go](https://github.com/tree-sitter/tree-sitter-go) | `vendor/<platform>/common/tree_sitter_go`, binaries | MIT |
+| [tree-sitter-javascript](https://github.com/tree-sitter/tree-sitter-javascript) | `vendor/<platform>/common/tree_sitter_javascript`, binaries | MIT |
+| [tomli](https://github.com/hukkin/tomli) | `vendor/<platform>/cp310/tomli` (Python 3.10 only) | MIT |
 | [libavoid-js](https://github.com/Aksem/libavoid-js) 0.5.0-beta.5, a WebAssembly build of libavoid from [Adaptagrams](https://github.com/mjwybrow/adaptagrams) | `vendor/web/libavoid`, inlined into every generated `index.html`, binaries | LGPL-2.1-or-later |
 | [CPython](https://www.python.org) | binaries only | Python Software Foundation License Version 2 |
 | [PyInstaller](https://pyinstaller.org) bootloader | binaries only | GPL-2.0-or-later with the bootloader exception |
@@ -22,6 +28,14 @@ module), as described in [vendor/web/libavoid/README.md](vendor/web/libavoid/REA
 `python tools/vendor.py --web` fetches the package again and verifies its
 checksum. The full license text is in
 [vendor/web/libavoid/LICENSE](vendor/web/libavoid/LICENSE).
+
+## Not bundled: tree-sitter-pascal
+
+Pascal support needs the [tree-sitter-pascal](https://github.com/jimmckeeth/tree-sitter-pascal)
+grammar, which is licensed under AGPL-3.0. It is therefore **not** part of
+`vendor/`, the binaries or the default dependencies: whoever wants Pascal
+installs it with `pip install tree-sitter-pascal`. blockwright's own Pascal
+description (`blockwright/languages/pascal.toml`) is MIT like the rest.
 
 ## CPython and PyInstaller
 
@@ -37,9 +51,25 @@ allows distributing it with programs under any license.
 
 Copyright (c) 2019 Max Brunsfeld, GitHub
 
-### tree-sitter-c, tree-sitter-cpp
+### tree-sitter-c, tree-sitter-cpp, tree-sitter-go, tree-sitter-javascript
 
 Copyright (c) 2014 Max Brunsfeld
+
+### tree-sitter-python
+
+Copyright (c) 2016 Max Brunsfeld
+
+### tree-sitter-java
+
+Copyright (c) 2017 Ayman Nadeem
+
+### tree-sitter-c-sharp
+
+Copyright (c) 2014-2023 Max Brunsfeld, Damien Guard, Amaan Qureshi, and contributors.
+
+### tomli
+
+Copyright (c) 2021 Taneli Hukkinen
 
 The following terms apply to each of the MIT-licensed components above:
 

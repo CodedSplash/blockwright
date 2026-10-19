@@ -4,6 +4,52 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Any programming language.** A language is now a description: a TOML file
+  that names a tree-sitter grammar and says which syntax node is a loop, a
+  branch, a call or input/output. The parser and the chart builder no longer
+  know any language themselves. [docs/languages.md](docs/languages.md)
+  describes the format and adds Rust from scratch, hooks included.
+- **Python, Pascal, Java, C#, Go and JavaScript**, next to C and C++. Their
+  grammars are bundled, except Pascal's: it is AGPL-3.0, so it is installed
+  with `pip install tree-sitter-pascal` and never shipped.
+- Code outside functions gets a chart of its own: a Python script, the
+  `begin … end.` of a Pascal program, C# top-level statements, a JS script.
+- New constructs on the charts:
+  - `elif` chains, `for … else`, `while … else`, `match`, `repeat … until`;
+  - `for i := 1 to n` / `downto`, and `range()` drawn as a counting loop;
+  - Go's `for` in all four forms, `switch` without a value, explicit
+    `fallthrough`.
+- Input written as an assignment: `n = int(input())`, `int n = sc.nextInt();`
+  and `n := ...ReadString()` become `Ввод: n`.
+- Output in each language's own style:
+  - `print("Total:", s)`, `System.out.println("Sum: " + s)`, `fmt.Println`,
+    `console.log` and `writeln` are woven into one line;
+  - f-strings, template literals, `Console.WriteLine("{0}", x)` and Python's
+    `%` formatting are filled in.
+- `--lang` takes any language, or several (`--lang c,cpp`), and limits the
+  run to their files. `--lang-dir` adds descriptions from a folder (also via
+  `BLOCKWRIGHT_LANGS`), `--langs` lists the languages, and `--tree` prints a
+  file's syntax tree for writing a description.
+- Unit tests (`python -m unittest discover tests`): IR snapshots for every
+  language and option set, description loading, and the CLI. CI runs them
+  on every Python version, with and without the Pascal grammar.
+
+### Changed
+
+- C and C++ moved into `c.toml` and `cpp.toml`. Their charts are unchanged:
+  the IR snapshots and the example album are identical to 1.4.0.
+- Loop bounds are simplified: `i < n + 1` gives `n` and `range(n - 1)`
+  gives `n - 2`, instead of `n + 1 - 1` and `n - 1 - 1`.
+- Sources with the same name in one folder (`lab.c`, `lab.py`) keep their
+  extension in chart file names, so neither overwrites the other.
+- `vendor/` grows by the five new grammars (~16 MB in total, most of it C#)
+  and tomli for Python 3.10. `tools/vendor.py --grammars` adds missing ones
+  without touching the rest.
+
 ## [1.4.0] — 2026-09-22
 
 ### Changed
@@ -132,6 +178,7 @@ First public release.
   3.10–3.14) ship with the repository, so no installation is required.
 - **Single-file build** via PyInstaller for Windows and Linux.
 
+[Unreleased]: https://github.com/CodedSplash/blockwright/compare/v1.4.0...HEAD
 [1.4.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.4.0
 [1.3.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.3.0
 [1.2.0]: https://github.com/CodedSplash/blockwright/releases/tag/v1.2.0

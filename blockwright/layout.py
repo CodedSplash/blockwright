@@ -454,10 +454,12 @@ def layout_do(item, opts):
     ys = [dec_y + d["h"]] + [p["points"][-1][1] for p in f.pend]
     exit_y = max(ys) + 24
 
-    # "yes" goes back to the top of the body
+    # "yes" goes back to the top of the body; for `until` it is "no"
+    back, out = ((opts.no_label, opts.yes_label) if item.until
+                 else (opts.yes_label, opts.no_label))
     f.edges.append(_edge([(-d["w"] / 2, cy), (left_ch, cy), (left_ch, join_y),
                           (0.0, join_y), (0.0, top)], arrow=True))
-    f.labels.append(_label(-d["w"] / 2 - 5, cy - 6, opts.yes_label, "end"))
+    f.labels.append(_label(-d["w"] / 2 - 5, cy - 6, back, "end"))
 
     for p in list(f.pend):
         hx, hy = p["points"][-1]
@@ -470,7 +472,7 @@ def layout_do(item, opts):
 
     f.edges.append(_edge([(d["w"] / 2, cy), (right_ch, cy), (right_ch, exit_y),
                           (0.0, exit_y)], arrow=False))
-    f.labels.append(_label(d["w"] / 2 + 5, cy - 6, opts.no_label, "start"))
+    f.labels.append(_label(d["w"] / 2 + 5, cy - 6, out, "start"))
 
     f.spine = 0.0
     f.height = exit_y

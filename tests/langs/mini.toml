@@ -1,0 +1,9 @@
+# A test description: Python with `assert` drawn as a decision by a hook.
+name = "mini"
+title = "Mini"
+extends = "python"
+extensions = [".mini"]
+hooks = "mini_hooks.py"
+
+[statements]
+assert_statement = { hook = "assert_as_decision" }

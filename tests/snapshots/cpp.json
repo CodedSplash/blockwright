@@ -1,0 +1,1501 @@
+{
+ "code": {
+  "features.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 11,
+     "name": "geo::Point::norm2",
+     "short": "geo::Point::norm2()",
+     "signature": "double norm2() const"
+    },
+    {
+     "body": {
+      "items": [],
+      "type": "Seq"
+     },
+     "line": 16,
+     "name": "geo::Shape::~Shape",
+     "short": "geo::Shape::~Shape()",
+     "signature": "virtual ~Shape()"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 18,
+     "name": "geo::Shape::operator<",
+     "short": "geo::Shape::operator<(o)",
+     "signature": "bool operator<(const Shape &o) const"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "double sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += s->area()",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "for each s in shapes",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "delete s",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "for each s in shapes",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 21,
+     "name": "geo::total",
+     "short": "geo::total(shapes)",
+     "signature": "double total(const std::vector<Shape *> &shapes)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 33,
+     "name": "maxOf",
+     "short": "maxOf(a, b)",
+     "signature": "T maxOf(T a, T b)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int v = std::stoi(s)",
+        "type": "Simple"
+       },
+       {
+        "cond": "v < 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Exception: std::invalid_argument(\"negative\")",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       },
+       {
+        "cond": "Exception caught const std::invalid_argument &e",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cerr << \"bad: \" << e.what() << std::endl",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "cond": "Exception caught ...",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Exception",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 35,
+     "name": "parse",
+     "short": "parse(s)",
+     "signature": "int parse(const std::string &s)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << std::fixed << std::setprecision(2)",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "body": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "std::cout << std::setw(4) << i * j",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "cond": null,
+           "header": "j = n, 1, -1",
+           "init": null,
+           "style": "hexagon",
+           "type": "ForLoop",
+           "update": null
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cout << '\\n'",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 1, n",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << std::endl",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 48,
+     "name": "table",
+     "short": "table(n)",
+     "signature": "void table(int n)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "std::string line",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int n = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::getline(std::cin, line)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cin >> n >> line",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "n = parse(line)",
+        "type": "Simple"
+       },
+       {
+        "kind": "predefined",
+        "terminal": false,
+        "text": "table(n)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"max = \" << maxOf(n, 3) << \", text \\\"\" << line << \"\\\"\\n\"",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "std::vector<int> v{1, 2, 3}",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "x % 2",
+           "else_": {
+            "items": [
+             {
+              "kind": "continue",
+              "type": "Jump"
+             }
+            ],
+            "type": "Seq"
+           },
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "std::cout << x",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "for each x in v",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int i = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "++i > 10",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "break",
+              "type": "Jump"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "true",
+        "type": "While"
+       },
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "io",
+             "terminal": false,
+             "text": "std::cout << \"small\" << std::endl",
+             "type": "Simple"
+            },
+            {
+             "kind": "break",
+             "type": "Jump"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "1",
+           "2"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "3"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "n",
+        "type": "Switch"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "printf(\"%s\\n\", line.c_str())",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 58,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  },
+  "widget.h": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "name_.empty()",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "End",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 6,
+     "name": "Widget::label",
+     "short": "Widget::label()",
+     "signature": "std::string label() const"
+    }
+   ],
+   "lang": "cpp"
+  }
+ },
+ "default": {
+  "features.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат x * x + y * y",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 11,
+     "name": "geo::Point::norm2",
+     "short": "geo::Point::norm2()",
+     "signature": "double norm2() const"
+    },
+    {
+     "body": {
+      "items": [],
+      "type": "Seq"
+     },
+     "line": 16,
+     "name": "geo::Shape::~Shape",
+     "short": "geo::Shape::~Shape()",
+     "signature": "virtual ~Shape()"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат area() < o.area()",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 18,
+     "name": "geo::Shape::operator<",
+     "short": "geo::Shape::operator<(o)",
+     "signature": "bool operator<(const Shape &o) const"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "double sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += s->area()",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "для каждого s из shapes",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "delete s",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "для каждого s из shapes",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат sum",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 21,
+     "name": "geo::total",
+     "short": "geo::total(shapes)",
+     "signature": "double total(const std::vector<Shape *> &shapes)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат a > b ? a : b",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 33,
+     "name": "maxOf",
+     "short": "maxOf(a, b)",
+     "signature": "T maxOf(T a, T b)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int v = stoi(s)",
+        "type": "Simple"
+       },
+       {
+        "cond": "v < 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Исключение: invalid_argument(\"negative\")",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат v",
+        "type": "Simple"
+       },
+       {
+        "cond": "Возникло исключение const invalid_argument &e",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: bad: {e.what()}",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "cond": "Возникло исключение ...",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Исключение",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат 0",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 35,
+     "name": "parse",
+     "short": "parse(s)",
+     "signature": "int parse(const std::string &s)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Перевод строки",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "body": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: {i * j}",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "cond": null,
+           "header": "j = n, 1, -1",
+           "init": null,
+           "style": "hexagon",
+           "type": "ForLoop",
+           "update": null
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Перевод строки",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 1, n",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Перевод строки",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 48,
+     "name": "table",
+     "short": "table(n)",
+     "signature": "void table(int n)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "string line",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int n = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: line",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: n, line",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "n = parse(line)",
+        "type": "Simple"
+       },
+       {
+        "kind": "predefined",
+        "terminal": false,
+        "text": "table(n)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: max = {maxOf(n, 3)}, text \"{line}\"",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "vector<int> v{1, 2, 3}",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "x % 2",
+           "else_": {
+            "items": [
+             {
+              "kind": "continue",
+              "type": "Jump"
+             }
+            ],
+            "type": "Seq"
+           },
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: x",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "для каждого x из v",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int i = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "++i > 10",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "break",
+              "type": "Jump"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "true",
+        "type": "While"
+       },
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "io",
+             "terminal": false,
+             "text": "Вывод: small",
+             "type": "Simple"
+            },
+            {
+             "kind": "break",
+             "type": "Jump"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "1",
+           "2"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат 3",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "3"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "n",
+        "type": "Switch"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: {line.c_str()}",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Конец",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 58,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  },
+  "widget.h": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "name_.empty()",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат \"<none>\"",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат name_",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 6,
+     "name": "Widget::label",
+     "short": "Widget::label()",
+     "signature": "std::string label() const"
+    }
+   ],
+   "lang": "cpp"
+  }
+ },
+ "list": {
+  "features.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат x * x + y * y",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 11,
+     "name": "geo::Point::norm2",
+     "short": "geo::Point::norm2()",
+     "signature": "double norm2() const"
+    },
+    {
+     "body": {
+      "items": [],
+      "type": "Seq"
+     },
+     "line": 16,
+     "name": "geo::Shape::~Shape",
+     "short": "geo::Shape::~Shape()",
+     "signature": "virtual ~Shape()"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат area() < o.area()",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 18,
+     "name": "geo::Shape::operator<",
+     "short": "geo::Shape::operator<(o)",
+     "signature": "bool operator<(const Shape &o) const"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "double sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += s->area()",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "есть ещё элементы shapes?",
+        "header": "",
+        "init": null,
+        "style": "decision",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "delete s",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "есть ещё элементы shapes?",
+        "header": "",
+        "init": null,
+        "style": "decision",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат sum",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 21,
+     "name": "geo::total",
+     "short": "geo::total(shapes)",
+     "signature": "double total(const std::vector<Shape *> &shapes)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат a > b ? a : b",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 33,
+     "name": "maxOf",
+     "short": "maxOf(a, b)",
+     "signature": "T maxOf(T a, T b)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int v = stoi(s)",
+        "type": "Simple"
+       },
+       {
+        "cond": "v < 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Исключение: invalid_argument(\"negative\")",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат v",
+        "type": "Simple"
+       },
+       {
+        "cond": "Возникло исключение const invalid_argument &e",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: \"bad: \", e.what()",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "cond": "Возникло исключение ...",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Исключение",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат 0",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 35,
+     "name": "parse",
+     "short": "parse(s)",
+     "signature": "int parse(const std::string &s)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: fixed, setprecision(2)",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "body": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: setw(4), i * j",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "cond": "j > 0",
+           "header": "",
+           "init": {
+            "kind": "process",
+            "terminal": false,
+            "text": "int j = n",
+            "type": "Simple"
+           },
+           "style": "decision",
+           "type": "ForLoop",
+           "update": {
+            "kind": "process",
+            "terminal": false,
+            "text": "--j",
+            "type": "Simple"
+           }
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Перевод строки",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i <= n",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 1",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Перевод строки",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 48,
+     "name": "table",
+     "short": "table(n)",
+     "signature": "void table(int n)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "string line",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int n = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: line",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: n, line",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "n = parse(line)",
+        "type": "Simple"
+       },
+       {
+        "kind": "predefined",
+        "terminal": false,
+        "text": "table(n)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"max = \", maxOf(n, 3), \", text \\\"\", line, \"\\\"\\n\"",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "vector<int> v{1, 2, 3}",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "x % 2",
+           "else_": {
+            "items": [
+             {
+              "kind": "continue",
+              "type": "Jump"
+             }
+            ],
+            "type": "Seq"
+           },
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: x",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "есть ещё элементы v?",
+        "header": "",
+        "init": null,
+        "style": "decision",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int i = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "++i > 10",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "break",
+              "type": "Jump"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "true",
+        "type": "While"
+       },
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "io",
+             "terminal": false,
+             "text": "Вывод: \"small\"",
+             "type": "Simple"
+            },
+            {
+             "kind": "break",
+             "type": "Jump"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "1",
+           "2"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат 3",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "3"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "n",
+        "type": "Switch"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"%s\\n\", line.c_str()",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат 0",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 58,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  },
+  "widget.h": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "name_.empty()",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат \"<none>\"",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат name_",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 6,
+     "name": "Widget::label",
+     "short": "Widget::label()",
+     "signature": "std::string label() const"
+    }
+   ],
+   "lang": "cpp"
+  }
+ }
+}

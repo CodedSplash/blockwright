@@ -1,8 +1,10 @@
 <div align="center">
 
-<img src="docs/banner.png" width="840" alt="blockwright — flowcharts from C/C++ source code">
+<img src="docs/banner.png" width="840" alt="blockwright — flowcharts from source code">
 
-### Turn C and C++ source code into GOST&nbsp;19.701-90 flowcharts
+### Turn source code into GOST&nbsp;19.701-90 flowcharts
+
+C, C++, Python, Pascal, Java, C#, Go, JavaScript — and any language you describe in a TOML file.
 
 Vector SVG for your report — and a real diagram editor in the browser.
 
@@ -37,9 +39,10 @@ Vector SVG for your report — and a real diagram editor in the browser.
 
 |  |  |
 |---|---|
-| 🧠 **Real parsing** | tree-sitter grammars for C and C++: classes, templates, namespaces, overloads, range-`for`, `switch` with fallthrough, `goto`, `try/catch` — never regular expressions |
+| 🧠 **Real parsing** | tree-sitter grammars: classes, templates, namespaces, overloads, range-`for`, `switch` with fallthrough, `match`, `repeat … until`, `goto`, `try/catch` — never regular expressions |
+| 🧩 **Any language** | eight languages ship; [one TOML file](docs/languages.md) adds another, with no change to the code |
 | 📁 **Whole projects** | directories are walked recursively, the language of each file is detected automatically, and a file that fails one grammar is retried with the other |
-| 💬 **Readable blocks** | `cout << "Score #" << i << ": "` becomes `Вывод: Score #{i}:`, and `printf("Total: %d\n", s)` becomes `Вывод: Total: {s}` |
+| 💬 **Readable blocks** | `cout << "Score #" << i << ": "` becomes `Вывод: Score #{i}:`, `printf("Total: %d\n", s)` and `print("Total:", s)` become `Вывод: Total: {s}`, and `n = int(input())` becomes `Ввод: n` |
 | ✏ **A real editor** | drag blocks, reshape connectors, re-attach arrows, add shapes from a palette, draw a chart from scratch, undo, export |
 | 📄 **Report ready** | SVG drops into Word as vector, PNG goes straight to the clipboard, every diagram is captioned `Рисунок N — …` |
 | 🎨 **Figma friendly** | arrows are real polygons and shapes sit in named groups, so the file opens as a clean layer tree |
@@ -112,6 +115,8 @@ python -m blockwright . -o out --open              # whole tree, open the album
 python -m blockwright . --only main --only *Queue* # pick functions by pattern
 python -m blockwright . --png 3                    # also render raster at ×3
 python -m blockwright . --list                     # just list what was found
+python -m blockwright . --lang python              # only Python files
+python -m blockwright --langs                      # languages and their grammars
 ```
 
 <details>
@@ -123,7 +128,10 @@ python -m blockwright . --list                     # just list what was found
 |--------|---------|
 | `-o, --out DIR` | where to write the result |
 | `--only PATTERN`, `--exclude PATTERN` | filter functions by name (repeatable) |
-| `--lang {auto,c,cpp}` | force the grammar |
+| `--lang LANG[,LANG]` | only files of these languages; a file with an unknown extension is parsed as this language |
+| `--lang-dir DIR` | extra language descriptions (`*.toml`, see [docs/languages.md](docs/languages.md)) |
+| `--langs` | list languages, their extensions and grammars |
+| `--tree` | print the syntax tree of the files — for writing a description |
 | `--for-style {auto,hexagon,decision}` | how `for` loops are drawn |
 | `--io-style {pretty,list,code}` | text inside I/O blocks |
 | `--return-style {auto,value,end}` | how `return` is labelled |
@@ -177,6 +185,26 @@ page and the browser redraws it with the same algorithm the Python side uses.
 
 ---
 
+## 🌐 Languages
+
+| Language | Extensions | Notes |
+|----------|------------|-------|
+| C | `.c` `.h` | |
+| C++ | `.cpp` `.cc` `.cxx` `.hpp` `.h` … | `.h` is C++ when it looks like it |
+| Python | `.py` | code outside functions is a chart of its own; `range()` loops are counting loops |
+| Pascal | `.pas` `.pp` `.dpr` `.lpr` | needs `pip install tree-sitter-pascal` (AGPL grammar, not bundled) |
+| Java | `.java` | |
+| C# | `.cs` | top-level statements are a chart of their own |
+| Go | `.go` | |
+| JavaScript | `.js` `.mjs` `.cjs` `.jsx` | script code is a chart of its own |
+
+Each language is a description in [`blockwright/languages/`](blockwright/languages):
+the grammar to use and which syntax node is a loop, a branch or an I/O call.
+To add a language, install its tree-sitter grammar and write such a file;
+[docs/languages.md](docs/languages.md) walks through Rust from scratch.
+
+---
+
 ## 🔤 How code becomes a chart
 
 <details open>
@@ -187,15 +215,17 @@ page and the browser redraws it with the same algorithm the Python side uses.
 | Construct | Block |
 |-----------|-------|
 | function entry | terminator with the signature (`Начало` for `main`) |
+| code outside functions (Python, Pascal, C#, JS) | a chart of its own, starting with `Начало` |
 | expression, assignment, declaration | process |
-| `cout <<`, `cin >>`, `printf`, `scanf`, `getline` | input/output parallelogram |
+| `cout <<`, `cin >>`, `printf`, `scanf`, `getline`, `print`, `input()`, `writeln`, `readln`, `System.out.println`, `Scanner.nextInt`, `Console.WriteLine`, `fmt.Println`, `console.log` | input/output parallelogram |
 | call to a function from the same project | predefined process |
 | `if / else`, `else if` | decision with `Да` / `Нет` branches |
 | `switch` | decision with one column per `case`, fallthrough drawn explicitly |
 | counting `for` | preparation hexagon: `i = 0, n - 1` |
 | general `for` | init block + decision + step block |
-| `for (auto x : v)` | preparation hexagon “для каждого x из v” |
-| `while`, `do … while` | decision with a feedback line |
+| `for (auto x : v)`, `for x in v`, `foreach` | preparation hexagon “для каждого x из v” |
+| `for i in range(a, b)`, `for i := 1 to n` | preparation hexagon `i = a, b - 1`, `i = 1, n` |
+| `while`, `do … while`, `repeat … until` | decision with a feedback line |
 | `break`, `continue` | line to the loop exit / to the condition |
 | `return` | terminator `Возврат …` or `Конец` |
 | `goto`, label | on-page connector |
@@ -295,8 +325,12 @@ refuse WebAssembly, the editor falls back to its simple built-in router.
 ```text
 blockwright/
 ├── __main__.py     entry point, activates the bundled parsers
+├── languages/      one description per language (*.toml)
+├── langs.py        loads the descriptions, node paths, the language registry
 ├── parse.py        file discovery, grammar choice, function extraction
-├── build.py        syntax tree  →  intermediate representation
+├── build.py        syntax tree  →  intermediate representation, driven by a description
+├── hooks.py        the hook interface for constructs a description cannot express
+├── project.py      file → parsed source → charts, shared by the CLI and the picker
 ├── model.py        IR structures
 ├── layout.py       structural layout: coordinates of shapes and lines
 ├── render.py       SVG output and the model handed to the editor
@@ -304,6 +338,7 @@ blockwright/
 ├── tui.py          terminal picker
 ├── png.py          raster export via headless Chrome/Edge
 └── text.py         text wrapping and measurement
+tests/              IR snapshots for every language, description and CLI tests
 tools/
 ├── vendor.py             rebuild vendor/: parsers and the connector router
 ├── install-termux.sh     one-shot setup for Android/Termux
@@ -318,8 +353,14 @@ build.py            single-file build
 ## 🙏 Acknowledgements
 
 Parsing rests on [tree-sitter](https://github.com/tree-sitter/tree-sitter) and
-its [C](https://github.com/tree-sitter/tree-sitter-c) and
-[C++](https://github.com/tree-sitter/tree-sitter-cpp) grammars. Connectors in the
+its grammars for [C](https://github.com/tree-sitter/tree-sitter-c),
+[C++](https://github.com/tree-sitter/tree-sitter-cpp),
+[Python](https://github.com/tree-sitter/tree-sitter-python),
+[Java](https://github.com/tree-sitter/tree-sitter-java),
+[C#](https://github.com/tree-sitter/tree-sitter-c-sharp),
+[Go](https://github.com/tree-sitter/tree-sitter-go),
+[JavaScript](https://github.com/tree-sitter/tree-sitter-javascript) and
+[Pascal](https://github.com/jimmckeeth/tree-sitter-pascal). Connectors in the
 editor are routed by libavoid from [Adaptagrams](https://github.com/mjwybrow/adaptagrams),
 built for the browser by [libavoid-js](https://github.com/Aksem/libavoid-js).
 
