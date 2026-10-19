@@ -1,0 +1,1970 @@
+{
+ "code": {
+  "grades.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "10",
+           "9"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "8",
+           "7"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "6",
+           "5"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": true,
+          "labels": [
+           "else"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "score / 10",
+        "type": "Switch"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 12,
+     "name": "verdict",
+     "short": "verdict(score)",
+     "signature": "std::string verdict(int score)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "count <= 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "End",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += scores[i]",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 29,
+     "name": "average",
+     "short": "average(scores, count)",
+     "signature": "double average(const int scores[], int count)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int scores[MAX_STUDENTS]",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int count = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"Сколько студентов в группе? \"",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cin >> count",
+        "type": "Simple"
+       },
+       {
+        "cond": "count < 1 || count > MAX_STUDENTS",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cout << \"Допустимо от 1 до \" << MAX_STUDENTS << \" студентов\" << std::endl",
+           "type": "Simple"
+          },
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "End",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cout << \"Балл студента #\" << i + 1 << \": \"",
+           "type": "Simple"
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cin >> scores[i]",
+           "type": "Simple"
+          },
+          {
+           "cond": "scores[i] < 0 || scores[i] > 100",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "std::cout << \"Балл вне диапазона 0..100, засчитан как 0\" << std::endl",
+              "type": "Simple"
+             },
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "scores[i] = 0",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int best = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "scores[i] > scores[best]",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "best = i",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 1, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"Средний балл: \" << average(scores, count) << std::endl",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"Лучший результат: \" << scores[best] << \" (\" << verdict(scores[best]) << \")\" << std::endl",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 38,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  },
+  "grades.en.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "10",
+           "9"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "8",
+           "7"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "6",
+           "5"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "End",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": true,
+          "labels": [
+           "else"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "score / 10",
+        "type": "Switch"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 12,
+     "name": "verdict",
+     "short": "verdict(score)",
+     "signature": "std::string verdict(int score)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "count <= 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "End",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += scores[i]",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 29,
+     "name": "average",
+     "short": "average(scores, count)",
+     "signature": "double average(const int scores[], int count)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int scores[MAX_STUDENTS]",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int count = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"How many students are in the group? \"",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cin >> count",
+        "type": "Simple"
+       },
+       {
+        "cond": "count < 1 || count > MAX_STUDENTS",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cout << \"Expected 1 to \" << MAX_STUDENTS << \" students\" << std::endl",
+           "type": "Simple"
+          },
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "End",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cout << \"Score of student #\" << i + 1 << \": \"",
+           "type": "Simple"
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "std::cin >> scores[i]",
+           "type": "Simple"
+          },
+          {
+           "cond": "scores[i] < 0 || scores[i] > 100",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "std::cout << \"Score is out of 0..100, counted as 0\" << std::endl",
+              "type": "Simple"
+             },
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "scores[i] = 0",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int best = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "scores[i] > scores[best]",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "best = i",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 1, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"Average score: \" << average(scores, count) << std::endl",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "std::cout << \"Best result: \" << scores[best] << \" (\" << verdict(scores[best]) << \")\" << std::endl",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "End",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 38,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  }
+ },
+ "default": {
+  "grades.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"отлично\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "10",
+           "9"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"хорошо\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "8",
+           "7"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"удовлетворительно\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "6",
+           "5"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"неудовлетворительно\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": true,
+          "labels": [
+           "иначе"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "score / 10",
+        "type": "Switch"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 12,
+     "name": "verdict",
+     "short": "verdict(score)",
+     "signature": "std::string verdict(int score)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "count <= 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 0.0",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += scores[i]",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат static_cast<double>(sum) / count",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 29,
+     "name": "average",
+     "short": "average(scores, count)",
+     "signature": "double average(const int scores[], int count)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int scores[MAX_STUDENTS]",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int count = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: Сколько студентов в группе?",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: count",
+        "type": "Simple"
+       },
+       {
+        "cond": "count < 1 || count > MAX_STUDENTS",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: Допустимо от 1 до {MAX_STUDENTS} студентов",
+           "type": "Simple"
+          },
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 1",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: Балл студента #{i + 1}:",
+           "type": "Simple"
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Ввод: scores[i]",
+           "type": "Simple"
+          },
+          {
+           "cond": "scores[i] < 0 || scores[i] > 100",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: Балл вне диапазона 0..100, засчитан как 0",
+              "type": "Simple"
+             },
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "scores[i] = 0",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int best = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "scores[i] > scores[best]",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "best = i",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 1, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: Средний балл: {average(scores, count)}",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: Лучший результат: {scores[best]} ({verdict(scores[best])})",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Конец",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 38,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  },
+  "grades.en.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"excellent\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "10",
+           "9"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"good\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "8",
+           "7"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"satisfactory\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "6",
+           "5"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"failed\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": true,
+          "labels": [
+           "иначе"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "score / 10",
+        "type": "Switch"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 12,
+     "name": "verdict",
+     "short": "verdict(score)",
+     "signature": "std::string verdict(int score)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "count <= 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 0.0",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += scores[i]",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат static_cast<double>(sum) / count",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 29,
+     "name": "average",
+     "short": "average(scores, count)",
+     "signature": "double average(const int scores[], int count)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int scores[MAX_STUDENTS]",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int count = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: How many students are in the group?",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: count",
+        "type": "Simple"
+       },
+       {
+        "cond": "count < 1 || count > MAX_STUDENTS",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: Expected 1 to {MAX_STUDENTS} students",
+           "type": "Simple"
+          },
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 1",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: Score of student #{i + 1}:",
+           "type": "Simple"
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Ввод: scores[i]",
+           "type": "Simple"
+          },
+          {
+           "cond": "scores[i] < 0 || scores[i] > 100",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: Score is out of 0..100, counted as 0",
+              "type": "Simple"
+             },
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "scores[i] = 0",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 0, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int best = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "scores[i] > scores[best]",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "best = i",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": null,
+        "header": "i = 1, count - 1",
+        "init": null,
+        "style": "hexagon",
+        "type": "ForLoop",
+        "update": null
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: Average score: {average(scores, count)}",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: Best result: {scores[best]} ({verdict(scores[best])})",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Конец",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 38,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  }
+ },
+ "list": {
+  "grades.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"отлично\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "10",
+           "9"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"хорошо\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "8",
+           "7"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"удовлетворительно\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "6",
+           "5"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"неудовлетворительно\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": true,
+          "labels": [
+           "иначе"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "score / 10",
+        "type": "Switch"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 12,
+     "name": "verdict",
+     "short": "verdict(score)",
+     "signature": "std::string verdict(int score)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "count <= 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 0.0",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += scores[i]",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i < count",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 0",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат static_cast<double>(sum) / count",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 29,
+     "name": "average",
+     "short": "average(scores, count)",
+     "signature": "double average(const int scores[], int count)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int scores[MAX_STUDENTS]",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int count = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"Сколько студентов в группе? \"",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: count",
+        "type": "Simple"
+       },
+       {
+        "cond": "count < 1 || count > MAX_STUDENTS",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: \"Допустимо от 1 до \", MAX_STUDENTS, \" студентов\"",
+           "type": "Simple"
+          },
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 1",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: \"Балл студента #\", i + 1, \": \"",
+           "type": "Simple"
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Ввод: scores[i]",
+           "type": "Simple"
+          },
+          {
+           "cond": "scores[i] < 0 || scores[i] > 100",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: \"Балл вне диапазона 0..100, засчитан как 0\"",
+              "type": "Simple"
+             },
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "scores[i] = 0",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i < count",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 0",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int best = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "scores[i] > scores[best]",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "best = i",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i < count",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 1",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"Средний балл: \", average(scores, count)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"Лучший результат: \", scores[best], \" (\", verdict(scores[best]), \")\"",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат 0",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 38,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  },
+  "grades.en.cpp": {
+   "errors": 0,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "cases": [
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"excellent\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "10",
+           "9"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"good\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "8",
+           "7"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"satisfactory\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": false,
+          "labels": [
+           "6",
+           "5"
+          ],
+          "type": "Case"
+         },
+         {
+          "body": {
+           "items": [
+            {
+             "kind": "terminator",
+             "terminal": true,
+             "text": "Возврат \"failed\"",
+             "type": "Simple"
+            }
+           ],
+           "type": "Seq"
+          },
+          "fallthrough": false,
+          "is_default": true,
+          "labels": [
+           "иначе"
+          ],
+          "type": "Case"
+         }
+        ],
+        "expr": "score / 10",
+        "type": "Switch"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 12,
+     "name": "verdict",
+     "short": "verdict(score)",
+     "signature": "std::string verdict(int score)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "cond": "count <= 0",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 0.0",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int sum = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "process",
+           "terminal": false,
+           "text": "sum += scores[i]",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i < count",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 0",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат static_cast<double>(sum) / count",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 29,
+     "name": "average",
+     "short": "average(scores, count)",
+     "signature": "double average(const int scores[], int count)"
+    },
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int scores[MAX_STUDENTS]",
+        "type": "Simple"
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int count = 0",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"How many students are in the group? \"",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: count",
+        "type": "Simple"
+       },
+       {
+        "cond": "count < 1 || count > MAX_STUDENTS",
+        "else_": null,
+        "then_": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: \"Expected 1 to \", MAX_STUDENTS, \" students\"",
+           "type": "Simple"
+          },
+          {
+           "kind": "terminator",
+           "terminal": true,
+           "text": "Возврат 1",
+           "type": "Simple"
+          }
+         ],
+         "type": "Seq"
+        },
+        "type": "If"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Вывод: \"Score of student #\", i + 1, \": \"",
+           "type": "Simple"
+          },
+          {
+           "kind": "io",
+           "terminal": false,
+           "text": "Ввод: scores[i]",
+           "type": "Simple"
+          },
+          {
+           "cond": "scores[i] < 0 || scores[i] > 100",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "io",
+              "terminal": false,
+              "text": "Вывод: \"Score is out of 0..100, counted as 0\"",
+              "type": "Simple"
+             },
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "scores[i] = 0",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i < count",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 0",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "process",
+        "terminal": false,
+        "text": "int best = 0",
+        "type": "Simple"
+       },
+       {
+        "body": {
+         "items": [
+          {
+           "cond": "scores[i] > scores[best]",
+           "else_": null,
+           "then_": {
+            "items": [
+             {
+              "kind": "process",
+              "terminal": false,
+              "text": "best = i",
+              "type": "Simple"
+             }
+            ],
+            "type": "Seq"
+           },
+           "type": "If"
+          }
+         ],
+         "type": "Seq"
+        },
+        "cond": "i < count",
+        "header": "",
+        "init": {
+         "kind": "process",
+         "terminal": false,
+         "text": "int i = 1",
+         "type": "Simple"
+        },
+        "style": "decision",
+        "type": "ForLoop",
+        "update": {
+         "kind": "process",
+         "terminal": false,
+         "text": "i++",
+         "type": "Simple"
+        }
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"Average score: \", average(scores, count)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: \"Best result: \", scores[best], \" (\", verdict(scores[best]), \")\"",
+        "type": "Simple"
+       },
+       {
+        "kind": "terminator",
+        "terminal": true,
+        "text": "Возврат 0",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 38,
+     "name": "main",
+     "short": "Начало",
+     "signature": "int main()"
+    }
+   ],
+   "lang": "cpp"
+  }
+ }
+}
