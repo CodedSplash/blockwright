@@ -30,7 +30,10 @@ class Descriptions(unittest.TestCase):
         self.assertEqual(reg.errors, [])
         for name in ("c", "cpp", "python", "pascal", "java", "csharp", "go", "javascript"):
             self.assertIn(name, reg.names())
-            self.assertTrue(reg.get(name).available, name)
+        # everything that is bundled must load from vendor/
+        for spec in reg.select():
+            if spec.bundle:
+                self.assertTrue(spec.available, spec.name)
 
     def test_extends_and_hooks(self):
         reg = langs.registry([LANGS])
@@ -52,6 +55,8 @@ class Descriptions(unittest.TestCase):
             with open(os.path.join(tmp, "bad.toml"), "w", encoding="utf-8") as fh:
                 fh.write('name = "bad"\ngrammar = "tree_sitter_c"\n'
                          '[statements]\nif_statement = { kind = "iff" }\n')
+            with open(os.path.join(tmp, "typo.toml"), "w", encoding="utf-8") as fh:
+                fh.write('name = "typo"\ngrammar = "tree_sitter_c"\n[function]\nnodes = []\n')
             with open(os.path.join(tmp, "orphan.toml"), "w", encoding="utf-8") as fh:
                 fh.write('name = "orphan"\nextends = "nope"\ngrammar = "tree_sitter_c"\n')
             reg = langs.Registry([tmp])
@@ -60,6 +65,8 @@ class Descriptions(unittest.TestCase):
         text = "\n".join(reg.errors)
         self.assertIn("iff", text)
         self.assertIn("nope", text)
+        self.assertIn("function", text)
+        self.assertIsNone(reg.get("typo"))
 
     def test_missing_grammar(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,6 +90,8 @@ class Descriptions(unittest.TestCase):
 class Cli(unittest.TestCase):
     def test_every_fixture_builds(self):
         for folder in sorted(os.listdir(FIXTURES)):
+            if not langs.registry().get(folder).available:
+                continue
             with self.subTest(folder=folder), tempfile.TemporaryDirectory() as out:
                 rc = main([os.path.join(FIXTURES, folder), "-o", out, "--no-ui", "-q"])
                 self.assertEqual(rc, 0)
@@ -92,11 +101,20 @@ class Cli(unittest.TestCase):
 
     def test_lang_filter(self):
         with tempfile.TemporaryDirectory() as out:
-            rc = main([FIXTURES, "-o", out, "--no-ui", "-q", "--lang", "pascal"])
+            rc = main([FIXTURES, "-o", out, "--no-ui", "-q", "--lang", "go"])
             self.assertEqual(rc, 0)
             svgs = sorted(f for f in os.listdir(out) if f.endswith(".svg"))
-            self.assertEqual(svgs, ["lab__Fill.svg", "lab__IsEven.svg",
-                                    "lab__Lab.svg", "lab__Swap.svg"])
+            self.assertEqual(svgs, ["lab__Pop.svg", "lab__Push.svg", "lab__fib.svg",
+                                    "lab__main.svg"])
+
+    def test_same_stem_in_two_languages(self):
+        with tempfile.TemporaryDirectory() as src, tempfile.TemporaryDirectory() as out:
+            for name, code in (("lab.c", "int main(void) { return 0; }\n"),
+                               ("lab.py", "def main():\n    print(1)\n")):
+                with open(os.path.join(src, name), "w", encoding="utf-8") as fh:
+                    fh.write(code)
+            self.assertEqual(main([src, "-o", out, "--no-ui", "-q", "--no-html"]), 0)
+            self.assertEqual(sorted(os.listdir(out)), ["lab_c__main.svg", "lab_py__main.svg"])
 
     def test_unknown_lang(self):
         self.assertEqual(main([FIXTURES, "--no-ui", "--lang", "cobol"]), 2)

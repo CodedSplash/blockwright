@@ -66,7 +66,8 @@ def grammars():
         with open(os.path.join(LANG_DIR, nm), "rb") as fh:
             data = tomllib.load(fh)
         g = data.get("grammar")
-        if not g:
+        # bundle = false: a grammar whose license does not allow shipping it here
+        if not g or data.get("bundle", True) is False:
             continue
         module = g if isinstance(g, str) else g["module"]
         out[module] = data.get("package", module.replace("_", "-"))

@@ -249,6 +249,9 @@ class Builder:
         inner = kids[0] if kids else None
         if inner is None or inner.type in r.get("skip", ()):
             return []
+        if self.spec.rule(inner) is not None:
+            # `if`, `while`, `match` are expressions in Rust and Kotlin
+            return self.stmt(inner)
         word = self.word(inner)
         if word is not None:
             return word
@@ -943,13 +946,21 @@ class Builder:
         if f is not None:
             if code_style:
                 return M.Simple(M.IO, self.t(node))
-            rest = args[parse_slice(f.get("args"))]
-            strip = self.spec.io_input_strip
-            if strip:
-                rest = [a.lstrip(strip) for a in rest]
+            rest = [self._strip_prefix(a) for a in args[parse_slice(f.get("args"))]]
             return M.Simple(M.IO, self.L("in") + ", ".join(rest)
                             if rest else self.L("in_plain"))
         return None
+
+    def _strip_prefix(self, arg):
+        """scanf("%d", &n) -> n: drop the address-of and similar prefixes."""
+        changed = True
+        while changed:
+            changed = False
+            for p in self.spec.io_input_strip:
+                if p and arg.startswith(p):
+                    arg = arg[len(p):].lstrip()
+                    changed = True
+        return arg
 
     def _reads_input(self, node):
         stack = [node]

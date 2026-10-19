@@ -49,11 +49,59 @@ COMMON_KEYS = {"kind", "when", "hook"}
 CASE_KEYS = {"value", "labels", "body", "default", "fallthrough"}
 HANDLER_KEYS = {"parameter", "body"}
 
+# every key a description may have, by section; anything else is a typo
+SECTIONS = {
+    "": {"name", "title", "grammar", "package", "extensions", "priority", "markers",
+         "retry", "case_sensitive", "separators", "statement_end", "assign", "strip",
+         "skip", "skip_pattern", "empty", "conditions", "words", "functions",
+         "program", "calls", "io", "strings", "hooks", "statements", "bundle",
+         "extends"},
+    "functions": {"nodes", "declarations", "requires", "name", "body", "parameters",
+                  "parameter_nodes", "ignore_parameters", "signature", "names",
+                  "scopes", "scope_separator", "entry", "ok_exit", "nested"},
+    "program": {"node", "body", "name", "skip"},
+    "calls": {"nodes", "callee", "callee_types"},
+    "io": {"output", "input", "assign", "skip_args", "unwrap_args", "input_strip",
+           "printf_conversions", "format_replace", "streams"},
+    "io.streams": {"output", "input", "output_operator", "input_operator", "newline",
+                   "manipulators"},
+    "strings": {"nodes", "concat", "concat_operator", "escape", "template",
+                "format_operator", "format_tuples"},
+}
+OUTPUT_KEYS = {"format", "style", "weave", "sep", "args"}
+INPUT_KEYS = {"args", "stream"}
+
 DEFAULT_LABEL_STRIP = r"^\s*(?:case|default)\b\s*|\s*(?::|->)\s*$"
 
 
 class SpecError(Exception):
     pass
+
+
+def _check_keys(data, where):
+    for section, allowed in SECTIONS.items():
+        table = data
+        for part in section.split(".") if section else []:
+            table = table.get(part, {}) if isinstance(table, dict) else {}
+        if not isinstance(table, dict):
+            raise SpecError(f"{where}: [{section}] должен быть таблицей")
+        bad = set(table) - allowed
+        if bad:
+            name = f"[{section}]" if section else "верхнем уровне"
+            raise SpecError(f"{where}: неизвестные ключи в {name}: {', '.join(sorted(bad))}")
+    io = data.get("io", {})
+    for kind, allowed in (("output", OUTPUT_KEYS), ("input", INPUT_KEYS)):
+        for fn, opts in io.get(kind, {}).items():
+            bad = set(opts) - allowed
+            if bad:
+                raise SpecError(f'{where}: io.{kind}."{fn}": неизвестные ключи '
+                                f"{', '.join(sorted(bad))}")
+
+
+def _as_list(v):
+    if v is None:
+        return []
+    return list(v) if isinstance(v, list) else [v]
 
 
 def parse_slice(text):
@@ -76,6 +124,7 @@ class Spec:
         self.path = path
         self.data = data
         where = os.path.basename(path)
+        _check_keys(data, where)
         try:
             self.name = data["name"]
             grammar = data["grammar"]
@@ -87,6 +136,7 @@ class Spec:
         self.grammar_function = grammar.get("function", "language")
         self.package = data.get("package", self.grammar_module.replace("_", "-"))
         self.title = data.get("title", self.name)
+        self.bundle = data.get("bundle", True)
         self.extensions = [e.lower() for e in data.get("extensions", [])]
         self.priority = data.get("priority", 0)
         self.markers = data.get("markers", [])
@@ -126,7 +176,7 @@ class Spec:
         if prog:
             self.program = {
                 "node": prog["node"],
-                "body": prog.get("body"),
+                "body": _as_list(prog.get("body")),
                 "name": prog.get("name"),
                 "skip": set(prog.get("skip", [])),
             }
@@ -142,7 +192,8 @@ class Spec:
         self.io_assign = io.get("assign", {})
         self.io_skip_args = set(io.get("skip_args", []))
         self.io_unwrap_args = set(io.get("unwrap_args", []))
-        self.io_input_strip = io.get("input_strip", "")
+        strip = io.get("input_strip", [])
+        self.io_input_strip = [strip] if isinstance(strip, str) else list(strip)
         self.io_conversions = io.get("printf_conversions", "diuoxXfFeEgGaAcspn")
         self.io_format_replace = io.get("format_replace", {})
         st = io.get("streams")
@@ -193,7 +244,7 @@ class Spec:
         if extra:
             raise SpecError(f"{where}: statements.{node_type}: лишние ключи "
                             f"{', '.join(sorted(extra))} для вида «{kind}»")
-        if kind == "hook" and rule["hook"] not in self.hooks:
+        if rule.get("hook") and rule["hook"] not in self.hooks:
             from . import hooks as builtin
             if not hasattr(builtin, rule["hook"]):
                 raise SpecError(f"{where}: statements.{node_type}: нет функции "
@@ -360,7 +411,7 @@ class Registry:
                 self.errors.append(f"{nm}: {e}")
                 continue
             if "hooks" in data:
-                data["hooks"] = os.path.join(folder, data["hooks"])
+                data["hooks"] = os.path.abspath(os.path.join(folder, data["hooks"]))
             name = data.get("name") or os.path.splitext(nm)[0]
             data["name"] = name
             self.raw[name] = (data, path)

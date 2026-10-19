@@ -18,6 +18,7 @@ from blockwright import vendored  # noqa: E402
 
 vendored.activate()
 
+from blockwright import langs  # noqa: E402
 from blockwright import parse as P  # noqa: E402
 from blockwright import project  # noqa: E402
 from blockwright.cli import CHART_WORDS, Opts  # noqa: E402
@@ -56,6 +57,8 @@ def analyze(folder, opts):
     sources, known = [], set()
     for path in P.discover([folder]):
         src = project.load(path)
+        if src.tree is None:
+            continue                     # grammar not installed (Pascal)
         known |= src.known
         sources.append(src)
     result = {}
@@ -75,19 +78,33 @@ class Snapshots(unittest.TestCase):
     maxDiff = None
 
 
+def _available(lang):
+    spec = langs.registry().get(lang)
+    return spec is not None and spec.available
+
+
 def _make_test(folder, path):
     def test(self):
         got = {name: analyze(path, make_opts(**kw))
                for name, kw in VARIANTS.items()}
         snap = os.path.join(SNAPSHOTS, folder + ".json")
+        want = {}
+        if os.path.exists(snap):
+            with open(snap, encoding="utf-8") as fh:
+                want = json.load(fh)
+        # files of a language whose grammar is missing here are kept as they are
+        for name, files in want.items():
+            for rel, data in files.items():
+                if not _available(data["lang"]):
+                    got.setdefault(name, {})[rel] = data
+        if not got.get("default"):
+            self.skipTest("no grammar installed for " + folder)
         text = json.dumps(got, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
-        if UPDATE or not os.path.exists(snap):
+        if UPDATE or not want:
             os.makedirs(SNAPSHOTS, exist_ok=True)
             with open(snap, "w", encoding="utf-8", newline="\n") as fh:
                 fh.write(text)
             return
-        with open(snap, encoding="utf-8") as fh:
-            want = json.load(fh)
         self.assertEqual(want, json.loads(text))
     return test
 

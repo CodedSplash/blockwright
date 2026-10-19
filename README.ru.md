@@ -1,8 +1,10 @@
 <div align="center">
 
-<img src="docs/banner.png" width="840" alt="blockwright — блок-схемы по коду C и C++">
+<img src="docs/banner.png" width="840" alt="blockwright — блок-схемы по исходному коду">
 
-### Блок-схемы по исходному коду C и C++ в нотации ГОСТ&nbsp;19.701-90
+### Блок-схемы по исходному коду в нотации ГОСТ&nbsp;19.701-90
+
+C, C++, Python, Pascal, Java, C#, Go, JavaScript — и любой язык, который вы опишете в TOML-файле.
 
 Векторный SVG для отчёта — и настоящий редактор схем прямо в браузере.
 
@@ -37,9 +39,10 @@
 
 |  |  |
 |---|---|
-| 🧠 **Понимает язык** | грамматики tree-sitter для C и C++: классы, шаблоны, пространства имён, перегрузки, `for` по диапазону, `switch` с «проваливанием», `goto`, `try/catch` — никаких регулярных выражений |
+| 🧠 **Понимает язык** | грамматики tree-sitter: классы, шаблоны, пространства имён, перегрузки, `for` по диапазону, `switch` с «проваливанием», `match`, `repeat … until`, `goto`, `try/catch` — никаких регулярных выражений |
+| 🧩 **Любой язык** | в комплекте восемь языков; ещё один добавляется [одним TOML-файлом](docs/languages.ru.md), без правки кода |
 | 📁 **Целые проекты** | папки обходятся рекурсивно, язык каждого файла определяется сам, а файл, не поддавшийся одной грамматике, пробуется второй |
-| 💬 **Читаемый текст** | `cout << "Балл #" << i << ": "` превращается в `Вывод: Балл #{i}:`, а `printf("Сумма: %d\n", s)` — в `Вывод: Сумма: {s}` |
+| 💬 **Читаемый текст** | `cout << "Балл #" << i << ": "` превращается в `Вывод: Балл #{i}:`, `printf("Сумма: %d\n", s)` и `print("Сумма:", s)` — в `Вывод: Сумма: {s}`, а `n = int(input())` — в `Ввод: n` |
 | ✏ **Настоящий редактор** | перетаскивание блоков, правка узлов линий, перепривязка стрелок, палитра фигур, схемы с нуля, отмена, экспорт |
 | 📄 **Готово для отчёта** | SVG вставляется в Word как вектор, PNG копируется в буфер, каждая схема подписана `Рисунок N — …` |
 | 🎨 **Дружит с Figma** | стрелки — настоящие фигуры, блоки разложены по именованным группам, файл открывается аккуратным деревом слоёв |
@@ -111,6 +114,8 @@ python -m blockwright . -o out --open              # всё дерево, отк
 python -m blockwright . --only main --only *Queue* # отобрать функции
 python -m blockwright . --png 3                    # ещё и растр ×3
 python -m blockwright . --list                     # что нашлось, без сборки
+python -m blockwright . --lang python              # только файлы Python
+python -m blockwright --langs                      # языки и их грамматики
 ```
 
 <details>
@@ -122,7 +127,10 @@ python -m blockwright . --list                     # что нашлось, бе
 |------|------------|
 | `-o, --out ПАПКА` | куда складывать результат |
 | `--only ШАБЛОН`, `--exclude ШАБЛОН` | отобрать функции по имени (можно повторять) |
-| `--lang {auto,c,cpp}` | принудительно задать грамматику |
+| `--lang ЯЗЫК[,ЯЗЫК]` | только файлы этих языков; файл с незнакомым расширением разбирается как указанный язык |
+| `--lang-dir ПАПКА` | дополнительные описания языков (`*.toml`, см. [docs/languages.ru.md](docs/languages.ru.md)) |
+| `--langs` | список языков, их расширений и грамматик |
+| `--tree` | напечатать синтаксическое дерево файлов — для тех, кто пишет описание |
 | `--for-style {auto,hexagon,decision}` | оформление `for` |
 | `--io-style {pretty,list,code}` | текст блоков ввода-вывода |
 | `--return-style {auto,value,end}` | оформление `return` |
@@ -177,6 +185,27 @@ python -m blockwright . --list                     # что нашлось, бе
 
 ---
 
+## 🌐 Языки
+
+| Язык | Расширения | Особенности |
+|------|------------|-------------|
+| C | `.c` `.h` | |
+| C++ | `.cpp` `.cc` `.cxx` `.hpp` `.h` … | `.h` считается C++, если похож на него |
+| Python | `.py` | код вне функций — отдельная схема; циклы по `range()` — счётные |
+| Pascal | `.pas` `.pp` `.dpr` `.lpr` | нужен `pip install tree-sitter-pascal` (грамматика под AGPL, в комплект не входит) |
+| Java | `.java` | |
+| C# | `.cs` | top-level statements — отдельная схема |
+| Go | `.go` | |
+| JavaScript | `.js` `.mjs` `.cjs` `.jsx` | код скрипта — отдельная схема |
+
+Каждый язык — это описание в [`blockwright/languages/`](blockwright/languages):
+какая грамматика и какой узел синтаксического дерева — цикл, ветвление или
+ввод-вывод. Чтобы добавить язык, поставьте его грамматику tree-sitter и
+напишите такой файл; в [docs/languages.ru.md](docs/languages.ru.md) с нуля
+разобран Rust.
+
+---
+
 ## 🔤 Как код превращается в схему
 
 <details open>
@@ -187,15 +216,17 @@ python -m blockwright . --list                     # что нашлось, бе
 | Конструкция | Блок |
 |-------------|------|
 | начало функции | овал с сигнатурой (для `main` — «Начало») |
+| код вне функций (Python, Pascal, C#, JS) | отдельная схема, начинается с «Начало» |
 | выражение, присваивание, объявление | процесс |
-| `cout <<`, `cin >>`, `printf`, `scanf`, `getline` | параллелограмм ввода-вывода |
+| `cout <<`, `cin >>`, `printf`, `scanf`, `getline`, `print`, `input()`, `writeln`, `readln`, `System.out.println`, `Scanner.nextInt`, `Console.WriteLine`, `fmt.Println`, `console.log` | параллелограмм ввода-вывода |
 | вызов функции из этого же проекта | предопределённый процесс |
 | `if / else`, `else if` | ромб с ветвями «Да» / «Нет» |
 | `switch` | ромб с колонкой на каждый `case`, «проваливание» рисуется явно |
 | `for` со счётчиком | шестиугольник «подготовка»: `i = 0, n - 1` |
 | `for` общего вида | инициализация + ромб условия + модификация |
-| `for (auto x : v)` | шестиугольник «для каждого x из v» |
-| `while`, `do … while` | ромб условия с обратной связью |
+| `for (auto x : v)`, `for x in v`, `foreach` | шестиугольник «для каждого x из v» |
+| `for i in range(a, b)`, `for i := 1 to n` | шестиугольник `i = a, b - 1`, `i = 1, n` |
+| `while`, `do … while`, `repeat … until` | ромб условия с обратной связью |
 | `break`, `continue` | линия к выходу из цикла / к проверке условия |
 | `return` | овал «Возврат …» либо «Конец» |
 | `goto`, метка | круг-соединитель |
@@ -294,8 +325,12 @@ Android внутри `proot-distro` (Ubuntu), если ничего компил
 ```text
 blockwright/
 ├── __main__.py     точка входа, подключение парсеров из vendor
+├── languages/      описания языков, по файлу на язык (*.toml)
+├── langs.py        загрузка описаний, пути к узлам, реестр языков
 ├── parse.py        поиск файлов, выбор грамматики, извлечение функций
-├── build.py        синтаксическое дерево  →  внутреннее представление
+├── build.py        синтаксическое дерево  →  внутреннее представление, по описанию языка
+├── hooks.py        интерфейс hooks для конструкций, которые не выразить описанием
+├── project.py      файл → разобранный исходник → схемы; общий для CLI и выбора в консоли
 ├── model.py        структуры представления
 ├── layout.py       структурная разметка: координаты фигур и линий
 ├── render.py       отрисовка SVG и модель для редактора
@@ -303,6 +338,7 @@ blockwright/
 ├── tui.py          выбор исходников в консоли
 ├── png.py          растеризация через headless Chrome/Edge
 └── text.py         перенос и измерение текста
+tests/              снимки IR для каждого языка, тесты описаний и CLI
 tools/
 ├── vendor.py             пересборка vendor/: парсеры и трассировщик линий
 ├── install-termux.sh     установка на Android (Termux) одной командой
@@ -317,8 +353,14 @@ build.py            сборка одного исполняемого файл�
 ## 🙏 Благодарности
 
 Разбор кода держится на [tree-sitter](https://github.com/tree-sitter/tree-sitter)
-и грамматиках [C](https://github.com/tree-sitter/tree-sitter-c) и
-[C++](https://github.com/tree-sitter/tree-sitter-cpp). Линии в редакторе
+и грамматиках [C](https://github.com/tree-sitter/tree-sitter-c),
+[C++](https://github.com/tree-sitter/tree-sitter-cpp),
+[Python](https://github.com/tree-sitter/tree-sitter-python),
+[Java](https://github.com/tree-sitter/tree-sitter-java),
+[C#](https://github.com/tree-sitter/tree-sitter-c-sharp),
+[Go](https://github.com/tree-sitter/tree-sitter-go),
+[JavaScript](https://github.com/tree-sitter/tree-sitter-javascript) и
+[Pascal](https://github.com/jimmckeeth/tree-sitter-pascal). Линии в редакторе
 прокладывает libavoid из [Adaptagrams](https://github.com/mjwybrow/adaptagrams)
 в сборке для браузера [libavoid-js](https://github.com/Aksem/libavoid-js).
 

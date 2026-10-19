@@ -39,6 +39,25 @@ def have_pyinstaller():
         return False
 
 
+def grammar_modules():
+    """Grammar modules named by the built-in language descriptions."""
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+    folder = os.path.join(BASE, "blockwright", "languages")
+    out = []
+    for nm in sorted(os.listdir(folder)):
+        if nm.endswith(".toml"):
+            with open(os.path.join(folder, nm), "rb") as fh:
+                data = tomllib.load(fh)
+            g = data.get("grammar")
+            # bundle = false: installed by the user, never packed into the binary
+            if g and data.get("bundle", True) is not False:
+                out.append(g if isinstance(g, str) else g["module"])
+    return out
+
+
 def sweep(name):
     for junk in ("build", f"{name}.spec"):
         p = os.path.join(BASE, junk)
@@ -78,8 +97,13 @@ def main():
            "--specpath", BASE]
     for p in vendor:
         cmd += ["--paths", p]
-    for mod in ("tree_sitter", "tree_sitter_c", "tree_sitter_cpp"):
+    # grammars are imported by name from the language descriptions
+    for mod in ("tree_sitter", *grammar_modules()):
         cmd += ["--hidden-import", mod, "--collect-binaries", mod]
+    if sys.version_info < (3, 11):
+        cmd += ["--hidden-import", "tomli"]
+    langs = os.path.join(BASE, "blockwright", "languages")
+    cmd += ["--add-data", f"{langs}{os.pathsep}{os.path.join('blockwright', 'languages')}"]
     for mod in ("blockwright.tui", "blockwright.album", "blockwright.png"):
         cmd += ["--hidden-import", mod]
     # the editor's connector router, inlined into index.html

@@ -5,6 +5,9 @@ name = "pascal"
 title = "Pascal"
 grammar = "tree_sitter_pascal"
 package = "tree-sitter-pascal"
+# The grammar is AGPL-3.0, so it is not shipped in vendor/ or the binaries:
+# `pip install tree-sitter-pascal` once to enable Pascal.
+bundle = false
 extensions = [".pas", ".pp", ".dpr", ".lpr"]
 markers = ["begin", "end."]
 case_sensitive = false
@@ -26,11 +29,11 @@ entry = []
 # local procedures get charts of their own
 nested = true
 
-# the main `begin … end.` of a program
+# the main `begin … end.`, with or without a `program Name;` header
 [program]
-node = "program"
-body = "block"
-name = "moduleName"
+node = "root"
+body = ["block", "program.block"]
+name = "program.moduleName"
 
 [statements]
 block = "block"
@@ -50,6 +53,10 @@ with = { kind = "inline", body = "body" }
 [calls]
 nodes = { exprCall = "args" }
 callee = "entity"
+
+[io]
+# writeln(x:8:2): the width and precision are not printed text
+skip_args = ["legacyFormat"]
 
 [io.output]
 write = { weave = ":" }

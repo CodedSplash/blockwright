@@ -1,7 +1,6 @@
 """From source files to flowchart IR: the steps shared by the CLI, the picker
 and the tests."""
 
-import os
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -55,11 +54,12 @@ def outline(source: Source):
 
 
 def _does_work(item):
-    """False for a program chart that only calls the user's functions."""
+    """False for module code that only sets constants and calls the user's
+    functions (`if __name__ == "__main__": main()`): no chart for that."""
     if isinstance(item, M.Seq):
         return any(_does_work(i) for i in item.items)
     if isinstance(item, M.Simple):
-        return item.kind not in (M.PREDEF, M.TERMINATOR)
+        return item.kind == M.IO
     if isinstance(item, M.If):
         return _does_work(item.then_) or (item.else_ is not None and _does_work(item.else_))
     return not isinstance(item, M.Jump)

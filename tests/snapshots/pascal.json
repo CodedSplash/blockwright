@@ -361,6 +361,35 @@
     }
    ],
    "lang": "pascal"
+  },
+  "noheader.pas": {
+   "errors": 1,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "readln(x)",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "writeln('x = ', x:8:2)",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 3,
+     "name": "noheader",
+     "short": "Начало",
+     "signature": "noheader"
+    }
+   ],
+   "lang": "pascal"
   }
  },
  "default": {
@@ -722,6 +751,35 @@
      "name": "Fill",
      "short": "Fill()",
      "signature": "procedure Fill"
+    }
+   ],
+   "lang": "pascal"
+  },
+  "noheader.pas": {
+   "errors": 1,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: x",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: x = {x}",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 3,
+     "name": "noheader",
+     "short": "Начало",
+     "signature": "noheader"
     }
    ],
    "lang": "pascal"
@@ -1126,6 +1184,35 @@
      "name": "Fill",
      "short": "Fill()",
      "signature": "procedure Fill"
+    }
+   ],
+   "lang": "pascal"
+  },
+  "noheader.pas": {
+   "errors": 1,
+   "functions": [
+    {
+     "body": {
+      "items": [
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Ввод: x",
+        "type": "Simple"
+       },
+       {
+        "kind": "io",
+        "terminal": false,
+        "text": "Вывод: 'x = ', x",
+        "type": "Simple"
+       }
+      ],
+      "type": "Seq"
+     },
+     "line": 3,
+     "name": "noheader",
+     "short": "Начало",
+     "signature": "noheader"
     }
    ],
    "lang": "pascal"

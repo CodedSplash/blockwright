@@ -27,13 +27,25 @@ jobs:
       - name: Build charts for the bundled example
         run: python -m blockwright examples -o out --no-ui
 
+      - name: Unit tests on the bundled parsers
+        run: python -m unittest discover -s tests -v
+
+      # Pascal's grammar is AGPL and never bundled; test it installed
+      - name: Unit tests with the Pascal grammar
+        run: |
+          python -m pip install --target pascal-grammar tree_sitter_pascal
+          python -m unittest discover -s tests
+        env:
+          PYTHONPATH: pascal-grammar
+
       - name: Check the expected files
         shell: python
         run: |
           import pathlib, sys
           out = pathlib.Path("out")
           want = ["index.html", "grades__main.svg",
-                  "grades__verdict.svg", "grades__average.svg"]
+                  "grades__verdict.svg", "grades__average.svg",
+                  "python_grades__grades.svg", "python_grades__verdict.svg"]
           missing = [n for n in want if not (out / n).is_file()]
           if missing:
               sys.exit("missing: " + ", ".join(missing))
@@ -85,6 +97,7 @@ jobs:
           "${{ matrix.built }}" examples -o binary-out --no-ui
           test -f binary-out/index.html
           test -f binary-out/grades__main.svg
+          test -f binary-out/python_grades__grades.svg
           grep -q "Вывод:" binary-out/grades__main.svg
           grep -q "AVOID_WASM" binary-out/index.html
 

@@ -120,6 +120,9 @@ def build_parser():
                          "см. docs/languages.md")
     ap.add_argument("--langs", action="store_true", dest="list_langs",
                     help="показать известные языки и выйти")
+    ap.add_argument("--tree", action="store_true",
+                    help="напечатать синтаксическое дерево файлов (типы узлов и поля) "
+                         "— подсказка для тех, кто пишет описание языка")
     ap.add_argument("--for-style", choices=["auto", "hexagon", "decision"], default="auto",
                     help="оформление for: шестиугольник «подготовка» или явные блоки")
     ap.add_argument("--io-style", choices=["pretty", "list", "natural", "code"],
@@ -230,6 +233,35 @@ def print_langs(reg):
         print(f"  {'':<12} {spec.path}")
 
 
+def print_trees(paths, only):
+    """`--tree`: node types with field names, as a language description sees them."""
+    files = P.discover(paths, only=only) if paths else []
+    if not files:
+        print("Укажите файл: python -m blockwright --tree prog.py", file=sys.stderr)
+        return 2
+    for path in files:
+        source = project.load(path, only)
+        if source is None or source.tree is None:
+            what = source.spec.install_hint() if source else "язык не определён"
+            print(f"{path}: не разобран ({what})", file=sys.stderr)
+            continue
+        print(f"# {path} [{source.spec.name}]")
+        src = source.src
+
+        def walk(node, depth, field):
+            text = src[node.start_byte:node.end_byte].decode("utf-8", "replace")
+            head = f"{field}: " if field else ""
+            leaf = f"  «{' '.join(text.split())[:60]}»" if node.named_child_count == 0 else ""
+            print(f"{'  ' * depth}{head}{node.type}{leaf}")
+            for i in range(node.child_count):
+                c = node.child(i)
+                if c.is_named:
+                    walk(c, depth + 1, node.field_name_for_child(i))
+
+        walk(source.tree.root_node, 0, None)
+    return 0
+
+
 def setup_languages(args):
     """Load language descriptions; returns the set of languages to use or None."""
     reg = langs.registry(args.lang_dir)
@@ -253,6 +285,8 @@ def main(argv=None):
     if args.list_langs:
         print_langs(langs.registry())
         return 0
+    if args.tree:
+        return print_trees(args.paths, only)
     prefs = load_prefs()
     # command-line flags win over remembered choices
     args.ui_lang = args.ui_lang or prefs.get("ui_lang") or "ru"
@@ -322,6 +356,12 @@ def main(argv=None):
         print(f"  ! {spec.title}: нет грамматики tree-sitter, пропущено файлов — "
               f"{len(paths_)}. Установите: {spec.install_hint()}", file=sys.stderr)
 
+    # lab.cpp and lab.py side by side: keep the extension in chart file names
+    stems = {}
+    for source in sources:
+        stem = os.path.splitext(rel_path(source.path, base_dir))[0]
+        stems[stem] = stems.get(stem, 0) + 1
+
     entries = []
     svg_files = []
     used = set()
@@ -329,6 +369,9 @@ def main(argv=None):
     for source in sources:
         path = source.path
         rel = rel_path(path, base_dir)
+        file_stem = os.path.splitext(rel)[0]
+        if stems[file_stem] > 1:
+            file_stem = rel.replace(".", "_")
         if source.errors:
             log(f"  ~ {rel}: разобран с {source.errors} ошибочн. участк. "
                 f"(схемы строятся по распознанной части)")
@@ -355,7 +398,7 @@ def main(argv=None):
                       file=sys.stderr)
                 continue
             title = f"{fn.name} — {rel}"
-            stem = safe_name(f"{os.path.splitext(rel)[0].replace('/', '_')}__{fn.name}")
+            stem = safe_name(f"{file_stem.replace('/', '_')}__{fn.name}")
             uniq, k = stem, 2
             while uniq in used:
                 uniq = f"{stem}_{k}"

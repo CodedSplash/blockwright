@@ -224,7 +224,10 @@ def describe_program(src, root, spec, path):
     node = root if root.type == prog["node"] else find(root, prog["node"], spec)
     if node is None:
         return None
-    holder = find(node, prog["body"], spec) if prog["body"] else node
+    holder = node
+    if prog["body"]:
+        holder = next((h for h in (find(node, b, spec) for b in prog["body"])
+                       if h is not None), None)
     if holder is None:
         return None
     stmts = [c for c in spec.named(holder)
